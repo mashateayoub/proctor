@@ -1,0 +1,2 @@
+-- Empty seed file as requested by the user. 
+-- Running npx supabase db reset --linked will no longer inject mock accounts.
