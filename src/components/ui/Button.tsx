@@ -1,4 +1,8 @@
+'use client';
+
 import React from 'react';
+import { motion } from 'framer-motion';
+import { tapSpring } from '@/lib/motion';
 
 type ButtonVariant = 'primary-blue' | 'primary-dark' | 'pill-link' | 'filter' | 'media-control';
 
@@ -8,8 +12,8 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export function Button({ variant = 'primary-blue', children, className = '', ...props }: ButtonProps) {
-  let baseStyles = 'inline-flex items-center justify-center transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-apple-blue';
-  
+  let baseStyles = 'inline-flex cursor-pointer items-center justify-center transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-apple-blue';
+
   switch (variant) {
     case 'primary-blue':
       baseStyles += ' bg-apple-blue text-white px-[15px] py-[8px] rounded-[8px] border border-transparent text-[17px] font-normal leading-[1.47] hover:brightness-110 active:bg-[#ededf2] active:text-apple-dark';
@@ -29,8 +33,14 @@ export function Button({ variant = 'primary-blue', children, className = '', ...
   }
 
   return (
-    <button className={`${baseStyles} ${className}`} {...props}>
+    <motion.button
+      className={`${baseStyles} ${className}`}
+      whileTap={props.disabled ? undefined : tapSpring.whileTap}
+      whileHover={props.disabled ? undefined : tapSpring.whileHover}
+      transition={tapSpring.transition}
+      {...props}
+    >
       {children}
-    </button>
+    </motion.button>
   );
 }

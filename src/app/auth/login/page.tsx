@@ -4,8 +4,9 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createBrowserClient } from '@supabase/ssr';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
-import { GlassNav } from '@/components/ui/Navigation';
+import { fadeUp, fadeIn, scaleIn } from '@/lib/motion';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -41,23 +42,37 @@ export default function LoginPage() {
 
   return (
     <>
-      {/* <GlassNav links={[]} rightAction={
-        <Link href="/auth/register">
-          <Button variant="pill-link">Create Account</Button>
-        </Link>
-      } /> */}
       <main className="flex min-h-screen items-center justify-center bg-apple-gray dark:bg-black pt-12 px-6">
-        <div className="w-full max-w-[400px]">
-          <div className="text-center mb-10">
+        <motion.div
+          {...scaleIn}
+          className="w-full max-w-[400px]"
+        >
+          <motion.div {...fadeUp} className="text-center mb-10">
             <h1 className="text-section-heading text-apple-dark dark:text-white mb-2">Sign In.</h1>
             <p className="text-body-standard text-black/80 dark:text-white/80">Access your proctoring dashboard.</p>
-          </div>
+          </motion.div>
 
-          <form onSubmit={handleLogin} className="flex flex-col gap-6">
-            {error && <p className="text-center text-red-500 text-caption">{error}</p>}
+          <motion.form
+            onSubmit={handleLogin}
+            className="flex flex-col gap-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.15, ease: [0.25, 0.46, 0.45, 0.94] as const }}
+          >
+            {error && (
+              <motion.p
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="text-center text-red-500 text-caption"
+              >
+                {error}
+              </motion.p>
+            )}
 
             <div className="flex flex-col gap-4">
-              <input
+              <motion.input
+                {...fadeIn}
+                transition={{ ...fadeIn.transition, delay: 0.2 }}
                 type="email"
                 required
                 placeholder="Email ID"
@@ -65,7 +80,9 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full bg-white dark:bg-[#272729] border border-black/10 dark:border-white/10 rounded-[11px] px-[16px] py-[15px] text-body-standard focus:outline-none focus:border-apple-blue focus:ring-1 focus:ring-apple-blue transition-colors"
               />
-              <input
+              <motion.input
+                {...fadeIn}
+                transition={{ ...fadeIn.transition, delay: 0.3 }}
                 type="password"
                 required
                 placeholder="Password"
@@ -79,7 +96,11 @@ export default function LoginPage() {
               {loading ? 'Authenticating...' : 'Sign In'}
             </Button>
 
-            <div className="text-center mt-2 border-t border-black/10 pt-6">
+            <motion.div
+              {...fadeIn}
+              transition={{ ...fadeIn.transition, delay: 0.4 }}
+              className="text-center mt-2 border-t border-black/10 pt-6"
+            >
               <p className="text-caption text-black/80 dark:text-white/80">
                 New to the platform?{' '}
                 <Link href="/auth/register" className="text-apple-link hover:underline">
@@ -87,9 +108,9 @@ export default function LoginPage() {
                 </Link>
                 .
               </p>
-            </div>
-          </form>
-        </div>
+            </motion.div>
+          </motion.form>
+        </motion.div>
       </main>
     </>
   );

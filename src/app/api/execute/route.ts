@@ -64,9 +64,9 @@ async function runCode(
     }
 
     const { stdout, stderr } = await execAsync(cmd, options);
-    return { stdout: (stdout || stderr).trim(), error: !!stderr && !stdout };
+    return { stdout: String(stdout || stderr).trim(), error: !!stderr && !stdout };
   } catch (e: any) {
-    return { stdout: (e.stderr || e.message || '').trim(), error: true };
+    return { stdout: String(e.stderr || e.message || '').trim(), error: true };
   }
 }
 

@@ -3,8 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { fadeUp, fadeIn } from '@/lib/motion';
 
 interface Exam {
   id: string;
@@ -104,16 +106,42 @@ export default function AddQuestionsPage() {
   return (
     <div className="w-full">
         <div className="max-w-[700px] mx-auto">
-          <div className="mb-10 text-center">
+          <motion.div {...fadeUp} className="mb-10 text-center">
             <h1 className="text-section-heading text-apple-dark dark:text-white mb-2">Build Content.</h1>
             <p className="text-body-standard text-black/80 dark:text-white/80">Add multiple choice variations directly into specific exams.</p>
-          </div>
+          </motion.div>
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-8">
-            {error && <p className="text-center text-red-500 text-caption font-semibold">{error}</p>}
-            {success && <p className="text-center text-[#0071e3] text-caption font-semibold">{success}</p>}
+          <motion.form
+            onSubmit={handleSubmit}
+            className="flex flex-col gap-8"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1, ease: [0.25, 0.46, 0.45, 0.94] as const }}
+          >
+            <AnimatePresence>
+              {error && (
+                <motion.p
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -5 }}
+                  className="text-center text-red-500 text-caption font-semibold"
+                >
+                  {error}
+                </motion.p>
+              )}
+              {success && (
+                <motion.p
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="text-center text-[#0071e3] text-caption font-semibold"
+                >
+                  {success}
+                </motion.p>
+              )}
+            </AnimatePresence>
             
-            <Card elevated className="p-8 bg-white dark:bg-[#272729]">
+            <Card elevated className="p-8 bg-white dark:bg-[#272729]" delay={0.05}>
                <h3 className="text-card-title text-apple-dark dark:text-white mb-6 tracking-tight">Question Parameters</h3>
                <div className="flex flex-col gap-5">
                  
@@ -149,20 +177,28 @@ export default function AddQuestionsPage() {
                </div>
             </Card>
 
-            <Card elevated className="p-8 bg-white dark:bg-[#272729]">
+            <Card elevated className="p-8 bg-white dark:bg-[#272729]" delay={0.15}>
                <h3 className="text-card-title text-apple-dark dark:text-white mb-2 tracking-tight">Multiple Choice Options</h3>
                <p className="text-caption text-black/60 dark:text-white/60 mb-6">Provide up to 4 options and select the solitary correct answer.</p>
                
                <div className="flex flex-col gap-4">
                  {options.map((opt, index) => (
-                    <div key={index} className="flex items-center gap-4">
-                       <button
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, x: -12 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.2 + index * 0.06 }}
+                      className="flex items-center gap-4"
+                    >
+                       <motion.button
                          type="button"
+                         whileHover={{ scale: 1.15 }}
+                         whileTap={{ scale: 0.9 }}
                          onClick={() => handleSetCorrect(index)}
                          className={`w-6 h-6 rounded-full border-[2px] flex items-center justify-center shrink-0 transition-colors ${opt.isCorrect ? 'border-apple-blue bg-apple-blue' : 'border-black/20 dark:border-white/20 hover:border-apple-blue/50'}`}
                        >
                          {opt.isCorrect && <div className="w-2 h-2 rounded-full bg-white" />}
-                       </button>
+                       </motion.button>
                        <input
                          type="text"
                          required
@@ -171,18 +207,22 @@ export default function AddQuestionsPage() {
                          value={opt.optionText}
                          onChange={e => handleOptionChange(index, e.target.value)}
                        />
-                    </div>
+                    </motion.div>
                  ))}
                </div>
             </Card>
 
-            <div className="flex justify-end gap-4 mt-4">
+            <motion.div
+              {...fadeIn}
+              transition={{ ...fadeIn.transition, delay: 0.3 }}
+              className="flex justify-end gap-4 mt-4"
+            >
               <Button type="button" variant="pill-link" onClick={() => router.push('/teacher/dashboard')}>Done</Button>
               <Button type="submit" variant="primary-blue" disabled={loading || exams.length === 0} className="w-[160px]">
                  {loading ? 'Attaching...' : 'Add to Bank'}
               </Button>
-            </div>
-          </form>
+            </motion.div>
+          </motion.form>
 
         </div>
     </div>

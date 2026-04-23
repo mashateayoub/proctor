@@ -2,7 +2,9 @@
 
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
 import { Button } from './Button';
+import { fadeIn } from '@/lib/motion';
 
 export function GlobalHeader() {
   const router = useRouter();
@@ -17,13 +19,18 @@ export function GlobalHeader() {
   };
 
   return (
-    <header className="h-[60px] border-b border-black/10 dark:border-white/10 flex items-center justify-between px-8 bg-white dark:bg-black flex-shrink-0">
-       <div className="text-[14px] font-medium text-black/60 dark:text-white/60">
+    <motion.header
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: 'easeOut', delay: 0.15 }}
+      className="h-[60px] border-b border-black/10 dark:border-white/10 flex items-center justify-between px-8 bg-white dark:bg-black flex-shrink-0"
+    >
+       <motion.div {...fadeIn} className="text-[14px] font-medium text-black/60 dark:text-white/60">
           Proctoring Session Isolated
-       </div>
+       </motion.div>
        <div>
           <Button variant="pill-link" onClick={handleLogout} className="py-1 px-4 text-[12px]">Sign Out</Button>
        </div>
-    </header>
+    </motion.header>
   );
 }
