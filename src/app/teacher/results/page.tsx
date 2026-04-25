@@ -65,9 +65,9 @@ export default function ResultsPage() {
   };
 
   const gradeColors: Record<string, string> = {
-    pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200',
-    passed: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200',
-    failed: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200',
+    pending: 'bg-yellow-100 text-yellow-800',
+    passed: 'bg-green-100 text-green-800',
+    failed: 'bg-red-100 text-red-800',
   };
 
   const gradeLabels: Record<string, string> = {
@@ -82,48 +82,48 @@ export default function ResultsPage() {
         <div className="max-w-[1200px] mx-auto">
           
           <motion.div {...fadeUp} className="mb-12">
-             <h1 className="text-section-heading text-apple-dark dark:text-white mb-2 tracking-tight">Examination Results.</h1>
-             <p className="text-body-standard text-black/80 dark:text-white/80 max-w-[600px]">
+             <h1 className="text-section-heading text-ink mb-2 tracking-tight">Examination Results.</h1>
+             <p className="text-body-standard text-ash max-w-[600px]">
                View quantitative outcomes, inspect and grade coding submissions, and publish grades.
              </p>
           </motion.div>
 
           <motion.div {...scaleIn} transition={{ ...scaleIn.transition, delay: 0.1 }}>
-            <Card elevated className="bg-white dark:bg-[#1d1d1f]">
+            <Card elevated className="bg-white">
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="border-b border-black/5 dark:border-white/5">
-                      <th className="px-6 py-4 text-caption font-semibold text-black/50 dark:text-white/50">Student</th>
-                      <th className="px-6 py-4 text-caption font-semibold text-black/50 dark:text-white/50">Exam</th>
-                      <th className="px-6 py-4 text-caption font-semibold text-black/50 dark:text-white/50">MCQ Score</th>
-                      <th className="px-6 py-4 text-caption font-semibold text-black/50 dark:text-white/50">Coding Grade</th>
-                      <th className="px-6 py-4 text-caption font-semibold text-black/50 dark:text-white/50 text-right">Code Review</th>
-                      <th className="px-6 py-4 text-caption font-semibold text-black/50 dark:text-white/50 text-right">Visibility</th>
+                    <tr className="border-b border-hairline">
+                      <th className="px-6 py-4 text-caption font-semibold text-ash">Student</th>
+                      <th className="px-6 py-4 text-caption font-semibold text-ash">Exam</th>
+                      <th className="px-6 py-4 text-caption font-semibold text-ash">MCQ Score</th>
+                      <th className="px-6 py-4 text-caption font-semibold text-ash">Coding Grade</th>
+                      <th className="px-6 py-4 text-caption font-semibold text-ash text-right">Code Review</th>
+                      <th className="px-6 py-4 text-caption font-semibold text-ash text-right">Visibility</th>
                     </tr>
                   </thead>
-                  <tbody className="text-body-standard text-apple-dark dark:text-white">
+                  <tbody className="text-body-standard text-ink">
                     {loading ? (
-                       <tr><td colSpan={6} className="text-center py-12 text-black/50">Loading results...</td></tr>
+                       <tr><td colSpan={6} className="text-center py-12 text-ash">Loading results...</td></tr>
                     ) : results.length === 0 ? (
-                       <tr><td colSpan={6} className="text-center py-12 text-black/50">No exam results found for your schemas.</td></tr>
+                       <tr><td colSpan={6} className="text-center py-12 text-ash">No exam results found for your schemas.</td></tr>
                     ) : (
                       results.map((r, idx) => (
                         <motion.tr
                           key={r.id}
                           {...tableRowVariant}
                           transition={{ ...tableRowVariant.transition, delay: idx * 0.04 }}
-                          className="border-b border-black/5 dark:border-white/5 hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                          className="border-b border-hairline hover:bg-soft-cloud transition-colors"
                         >
                           <td className="px-6 py-4">
                             <div className="flex flex-col">
                               <span className="font-semibold text-[14px]">{r.users?.name || 'Unknown'}</span>
-                              <span className="text-[12px] text-black/60 dark:text-white/60">{r.users?.email}</span>
+                              <span className="text-[12px] text-ash">{r.users?.email}</span>
                             </div>
                           </td>
                           <td className="px-6 py-4 text-[14px]">{r.exams?.exam_name}</td>
                           <td className="px-6 py-4">
-                             <span className={`text-[12px] px-2 py-1 rounded-[4px] font-semibold ${r.mcq_score >= 50 ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200'}`}>
+                             <span className={`text-[12px] px-2 py-1 rounded-[4px] font-semibold ${r.mcq_score >= 50 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                                 {r.mcq_score}%
                              </span>
                           </td>
@@ -133,7 +133,7 @@ export default function ResultsPage() {
                                 {gradeLabels[r.coding_grade || 'pending']}
                               </span>
                             ) : (
-                              <span className="text-[12px] text-black/30 dark:text-white/30">N/A</span>
+                              <span className="text-[12px] text-stone">N/A</span>
                             )}
                           </td>
                           <td className="px-6 py-4 text-right">
@@ -181,26 +181,26 @@ export default function ResultsPage() {
           >
             <motion.div
               {...modalVariants}
-              className="w-full max-w-[800px] max-h-[85vh] bg-white dark:bg-[#1d1d1f] rounded-[16px] overflow-hidden flex flex-col shadow-2xl"
+              className="w-full max-w-[800px] max-h-[85vh] bg-white rounded-[16px] overflow-hidden flex flex-col shadow-2xl"
               onClick={e => e.stopPropagation()}
             >
-              <div className="flex justify-between items-center p-6 border-b border-black/10 dark:border-white/10">
-                <h2 className="text-card-title text-apple-dark dark:text-white tracking-tight">Code Submission Inspector</h2>
+              <div className="flex justify-between items-center p-6 border-b border-hairline">
+                <h2 className="text-card-title text-ink tracking-tight">Code Submission Inspector</h2>
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                   onClick={() => setSelectedCode(null)}
-                  className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center text-apple-dark dark:text-white hover:bg-black/10 transition-colors"
+                  className="w-8 h-8 rounded-full bg-soft-cloud flex items-center justify-center text-ink hover:bg-black/10 transition-colors"
                 >
                   ✕
                 </motion.button>
               </div>
 
               {/* Teacher Grading Controls */}
-              <div className="px-6 py-4 border-b border-black/10 dark:border-white/10 bg-[#fafafc] dark:bg-[#111]">
+              <div className="px-6 py-4 border-b border-hairline bg-soft-cloud">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <span className="text-[13px] font-semibold text-black/60 dark:text-white/60">Your Grade:</span>
+                    <span className="text-[13px] font-semibold text-ash">Your Grade:</span>
                     <motion.span
                       key={selectedCode.currentGrade}
                       initial={{ scale: 0.8, opacity: 0 }}
@@ -218,7 +218,7 @@ export default function ResultsPage() {
                       className={`px-4 py-1.5 rounded-[6px] text-[12px] font-semibold transition-all ${
                         selectedCode.currentGrade === 'passed'
                           ? 'bg-green-600 text-white ring-2 ring-green-400'
-                          : 'bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-300'
+                          : 'bg-green-100 text-green-800 hover:bg-green-200'
                       }`}
                     >
                       ✓ Pass
@@ -230,7 +230,7 @@ export default function ResultsPage() {
                       className={`px-4 py-1.5 rounded-[6px] text-[12px] font-semibold transition-all ${
                         selectedCode.currentGrade === 'failed'
                           ? 'bg-red-600 text-white ring-2 ring-red-400'
-                          : 'bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-300'
+                          : 'bg-red-100 text-red-800 hover:bg-red-200'
                       }`}
                     >
                       ✗ Fail
@@ -242,7 +242,7 @@ export default function ResultsPage() {
                       className={`px-4 py-1.5 rounded-[6px] text-[12px] font-semibold transition-all ${
                         selectedCode.currentGrade === 'pending'
                           ? 'bg-yellow-500 text-white ring-2 ring-yellow-300'
-                          : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300'
+                          : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
                       }`}
                     >
                       ◷ Pending
@@ -251,9 +251,9 @@ export default function ResultsPage() {
                 </div>
               </div>
 
-              <div className="p-6 overflow-y-auto bg-apple-gray dark:bg-black h-full flex flex-col gap-6">
+              <div className="p-6 overflow-y-auto bg-soft-cloud h-full flex flex-col gap-6">
                  {selectedCode.submissions.length === 0 ? (
-                   <p className="text-center text-body-standard text-black/60 pt-12">No code compiled.</p>
+                   <p className="text-center text-body-standard text-ash pt-12">No code compiled.</p>
                  ) : (
                    selectedCode.submissions.map((sub, i) => (
                      <motion.div
@@ -265,7 +265,7 @@ export default function ResultsPage() {
                      >
                         {/* Test Results Breakdown */}
                         {sub.testResults && sub.testResults.length > 0 && (
-                          <div className="bg-[#272729] rounded-[8px] p-5">
+                          <div className="bg-charcoal rounded-[8px] p-5">
                             <div className="flex justify-between items-center mb-4 pb-3 border-b border-white/10">
                               <span className="text-[13px] font-semibold text-white">Test Suite Results</span>
                               <span className={`text-[12px] font-bold px-3 py-1 rounded-[6px] ${
@@ -309,9 +309,9 @@ export default function ResultsPage() {
                         )}
 
                         {/* Code Block */}
-                        <div className="bg-[#272729] rounded-[8px] overflow-hidden p-6 text-white font-mono text-[12px]">
+                        <div className="bg-charcoal rounded-[8px] overflow-hidden p-6 text-white font-mono text-[12px]">
                            <div className="flex justify-between items-center pb-4 border-b border-white/10 mb-4">
-                             <span className="text-[#0071e3] uppercase font-bold tracking-wider">{sub.language}</span>
+                             <span className="text-[#ff385c] uppercase font-bold tracking-wider">{sub.language}</span>
                              <span className="text-white/60">{sub.executionTime}ms</span>
                            </div>
                            <pre className="whitespace-pre-wrap leading-relaxed opacity-90">{sub.code}</pre>

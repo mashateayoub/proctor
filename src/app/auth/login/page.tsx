@@ -42,14 +42,14 @@ export default function LoginPage() {
 
   return (
     <>
-      <main className="flex min-h-screen items-center justify-center bg-apple-gray dark:bg-black pt-12 px-6">
+      <main className="flex min-h-screen items-center justify-center bg-soft-cloud px-6 py-12 text-ink">
         <motion.div
           {...scaleIn}
-          className="w-full max-w-[400px]"
+          className="w-full max-w-[420px] rounded-[20px] border border-hairline bg-white p-8 airbnb-card-shadow"
         >
           <motion.div {...fadeUp} className="text-center mb-10">
-            <h1 className="text-section-heading text-apple-dark dark:text-white mb-2">Sign In.</h1>
-            <p className="text-body-standard text-black/80 dark:text-white/80">Access your proctoring dashboard.</p>
+            <h1 className="text-section-heading mb-2">Sign in</h1>
+            <p className="text-body-standard text-ash">Access your proctoring dashboard.</p>
           </motion.div>
 
           <motion.form
@@ -63,7 +63,7 @@ export default function LoginPage() {
               <motion.p
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="text-center text-red-500 text-caption"
+                className="text-center text-error text-caption"
               >
                 {error}
               </motion.p>
@@ -78,7 +78,7 @@ export default function LoginPage() {
                 placeholder="Email ID"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-white dark:bg-[#272729] border border-black/10 dark:border-white/10 rounded-[11px] px-[16px] py-[15px] text-body-standard focus:outline-none focus:border-apple-blue focus:ring-1 focus:ring-apple-blue transition-colors"
+                className="airbnb-input w-full px-4 py-[14px] text-body-standard transition-colors"
               />
               <motion.input
                 {...fadeIn}
@@ -88,7 +88,7 @@ export default function LoginPage() {
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-white dark:bg-[#272729] border border-black/10 dark:border-white/10 rounded-[11px] px-[16px] py-[15px] text-body-standard focus:outline-none focus:border-apple-blue focus:ring-1 focus:ring-apple-blue transition-colors"
+                className="airbnb-input w-full px-4 py-[14px] text-body-standard transition-colors"
               />
             </div>
 
@@ -99,11 +99,11 @@ export default function LoginPage() {
             <motion.div
               {...fadeIn}
               transition={{ ...fadeIn.transition, delay: 0.4 }}
-              className="text-center mt-2 border-t border-black/10 pt-6"
+              className="text-center mt-2 border-t border-hairline pt-6"
             >
-              <p className="text-caption text-black/80 dark:text-white/80">
+              <p className="text-caption text-ash">
                 New to the platform?{' '}
-                <Link href="/auth/register" className="text-apple-link hover:underline">
+                <Link href="/auth/register" className="font-semibold text-ink underline-offset-4 hover:underline">
                   Create an account
                 </Link>
                 .

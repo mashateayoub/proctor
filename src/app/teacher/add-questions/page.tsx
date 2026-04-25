@@ -107,8 +107,8 @@ export default function AddQuestionsPage() {
     <div className="w-full">
         <div className="max-w-[700px] mx-auto">
           <motion.div {...fadeUp} className="mb-10 text-center">
-            <h1 className="text-section-heading text-apple-dark dark:text-white mb-2">Build Content.</h1>
-            <p className="text-body-standard text-black/80 dark:text-white/80">Add multiple choice variations directly into specific exams.</p>
+            <h1 className="text-section-heading text-ink mb-2">Build Content.</h1>
+            <p className="text-body-standard text-ash">Add multiple choice variations directly into specific exams.</p>
           </motion.div>
 
           <motion.form
@@ -134,23 +134,23 @@ export default function AddQuestionsPage() {
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
-                  className="text-center text-[#0071e3] text-caption font-semibold"
+                  className="text-center text-[#ff385c] text-caption font-semibold"
                 >
                   {success}
                 </motion.p>
               )}
             </AnimatePresence>
             
-            <Card elevated className="p-8 bg-white dark:bg-[#272729]" delay={0.05}>
-               <h3 className="text-card-title text-apple-dark dark:text-white mb-6 tracking-tight">Question Parameters</h3>
+            <Card elevated className="p-8 bg-white" delay={0.05}>
+               <h3 className="text-card-title text-ink mb-6 tracking-tight">Question Parameters</h3>
                <div className="flex flex-col gap-5">
                  
                  <div>
-                    <label className="text-caption text-black/80 dark:text-white/80 mb-1 block">Target Exam</label>
+                    <label className="text-caption text-ash mb-1 block">Target Exam</label>
                     <div className="relative">
                       <select
                         required
-                        className="w-full appearance-none bg-[#f5f5f7] dark:bg-black/20 border border-black/10 dark:border-white/10 rounded-[8px] px-[16px] py-[12px] text-body-standard focus:outline-none focus:border-apple-blue"
+                        className="w-full appearance-none bg-soft-cloud border border-hairline rounded-[8px] px-[16px] py-[12px] text-body-standard focus:outline-none focus:border-rausch"
                         value={selectedExamId}
                         onChange={e => setSelectedExamId(e.target.value)}
                       >
@@ -159,16 +159,16 @@ export default function AddQuestionsPage() {
                            <option key={exam.id} value={exam.id}>{exam.exam_name}</option>
                         ))}
                       </select>
-                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-black/50 dark:text-white/50">▼</div>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-ash">▼</div>
                     </div>
                  </div>
 
                  <div>
-                    <label className="text-caption text-black/80 dark:text-white/80 mb-1 block">Question Prompt</label>
+                    <label className="text-caption text-ash mb-1 block">Question Prompt</label>
                     <textarea
                       required
                       rows={3}
-                      className="w-full resize-none bg-[#f5f5f7] dark:bg-black/20 border border-black/10 dark:border-white/10 rounded-[8px] px-[16px] py-[12px] text-body-standard focus:outline-none focus:border-apple-blue"
+                      className="w-full resize-none bg-soft-cloud border border-hairline rounded-[8px] px-[16px] py-[12px] text-body-standard focus:outline-none focus:border-rausch"
                       placeholder="What is the time complexity of QuickSort?"
                       value={questionText}
                       onChange={e => setQuestionText(e.target.value)}
@@ -177,9 +177,9 @@ export default function AddQuestionsPage() {
                </div>
             </Card>
 
-            <Card elevated className="p-8 bg-white dark:bg-[#272729]" delay={0.15}>
-               <h3 className="text-card-title text-apple-dark dark:text-white mb-2 tracking-tight">Multiple Choice Options</h3>
-               <p className="text-caption text-black/60 dark:text-white/60 mb-6">Provide up to 4 options and select the solitary correct answer.</p>
+            <Card elevated className="p-8 bg-white" delay={0.15}>
+               <h3 className="text-card-title text-ink mb-2 tracking-tight">Multiple Choice Options</h3>
+               <p className="text-caption text-ash mb-6">Provide up to 4 options and select the solitary correct answer.</p>
                
                <div className="flex flex-col gap-4">
                  {options.map((opt, index) => (
@@ -195,14 +195,14 @@ export default function AddQuestionsPage() {
                          whileHover={{ scale: 1.15 }}
                          whileTap={{ scale: 0.9 }}
                          onClick={() => handleSetCorrect(index)}
-                         className={`w-6 h-6 rounded-full border-[2px] flex items-center justify-center shrink-0 transition-colors ${opt.isCorrect ? 'border-apple-blue bg-apple-blue' : 'border-black/20 dark:border-white/20 hover:border-apple-blue/50'}`}
+                         className={`w-6 h-6 rounded-full border-[2px] flex items-center justify-center shrink-0 transition-colors ${opt.isCorrect ? 'border-rausch bg-rausch' : 'border-hairline hover:border-rausch/50'}`}
                        >
                          {opt.isCorrect && <div className="w-2 h-2 rounded-full bg-white" />}
                        </motion.button>
                        <input
                          type="text"
                          required
-                         className={`w-full bg-[#f5f5f7] dark:bg-black/20 border transition-colors rounded-[8px] px-[16px] py-[12px] text-body-standard focus:outline-none focus:border-apple-blue ${opt.isCorrect ? 'border-apple-blue/30 bg-apple-blue/5 dark:bg-apple-blue/10 text-apple-blue' : 'border-black/10 dark:border-white/10'}`}
+                         className={`w-full bg-soft-cloud border transition-colors rounded-[8px] px-[16px] py-[12px] text-body-standard focus:outline-none focus:border-rausch ${opt.isCorrect ? 'border-rausch/30 bg-rausch/5 text-rausch' : 'border-hairline'}`}
                          placeholder={`Option ${index + 1}`}
                          value={opt.optionText}
                          onChange={e => handleOptionChange(index, e.target.value)}

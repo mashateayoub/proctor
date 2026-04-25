@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
 import { Button } from '@/components/ui/Button';
 import ProctorCamera from '@/components/ProctorCamera';
+import { persistProctoringLog } from '@/lib/proctoringLogs';
 
 // Monaco editor for code block execution
 import Editor from '@monaco-editor/react';
@@ -113,13 +114,17 @@ export default function ActiveExamPage() {
     const mcqScore = calculateMcqScore();
     const codingSubmissions = codingQuestion ? [{ code, language, executionTime: execResult?.time || 0, success: !execResult?.error }] : [];
 
-    const { error: submitErr } = await supabase.from('results').insert({
-      exam_id: examId,
-      student_id: user.id,
-      mcq_score: Math.round(mcqScore),
-      coding_submissions: codingSubmissions,
-      show_to_student: false
-    });
+    const { data: result, error: submitErr } = await supabase
+      .from('results')
+      .insert({
+        exam_id: examId,
+        student_id: user.id,
+        mcq_score: Math.round(mcqScore),
+        coding_submissions: codingSubmissions,
+        show_to_student: false
+      })
+      .select('id')
+      .single();
 
     if (submitErr) {
        console.error("Critical: Failed to save exam submission via RLS", submitErr);
@@ -128,17 +133,29 @@ export default function ActiveExamPage() {
        return;
     }
 
+    const { error: logErr } = await persistProctoringLog(supabase, {
+      examId,
+      studentId: user.id,
+      resultId: result.id,
+    });
+
+    if (logErr) {
+       alert("Exam submitted, but proctoring analytics failed to sync. Please contact your teacher.");
+       console.error("Critical: Failed to save proctoring analytics", logErr);
+       return;
+    }
+
     router.push('/student/dashboard');
   };
 
-  if (!exam) return <div className="min-h-screen bg-black/5 flex items-center justify-center">Loading strict environment...</div>;
+  if (!exam) return <div className="min-h-screen bg-soft-cloud flex items-center justify-center">Loading strict environment...</div>;
 
   const m: number = Math.floor(timeLeft / 60);
   const s: number = timeLeft % 60;
   const timeString = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 
   return (
-    <div className="min-h-screen bg-apple-gray dark:bg-black text-apple-dark dark:text-white flex flex-col pt-[48px]">
+    <div className="min-h-screen bg-soft-cloud text-ink flex flex-col pt-[48px]">
       
       {/* Sticky Top Bar over the entire screen */}
       <div className="fixed top-0 left-0 right-0 h-[48px] bg-red-600 z-[100] flex justify-between items-center px-6 text-white overflow-hidden shadow-lg">
@@ -153,9 +170,9 @@ export default function ActiveExamPage() {
 
       {phase === 'mcq' && questions.length > 0 && (
          <div className="flex-grow flex items-center justify-center p-6">
-           <div className="w-full max-w-[800px] bg-white dark:bg-[#1d1d1f] rounded-[12px] p-8 shadow-[0_5px_30px_0_rgba(0,0,0,0.22)]">
-              <div className="flex justify-between items-center mb-8 border-b border-black/10 dark:border-white/10 pb-4">
-                <span className="text-caption text-black/50 dark:text-white/50 font-semibold">Question {currentIdx + 1} of {questions.length}</span>
+           <div className="w-full max-w-[800px] bg-white rounded-[12px] p-8 shadow-[0_5px_30px_0_rgba(0,0,0,0.22)]">
+              <div className="flex justify-between items-center mb-8 border-b border-hairline pb-4">
+                <span className="text-caption text-ash font-semibold">Question {currentIdx + 1} of {questions.length}</span>
               </div>
               
               <h2 className="text-[21px] font-bold leading-tight mb-8">
@@ -169,7 +186,7 @@ export default function ActiveExamPage() {
                       <button 
                         key={idx}
                         onClick={() => handleSelectOption(questions[currentIdx].id, idx)}
-                        className={`text-left p-4 rounded-[8px] border transition-colors ${isSelected ? 'bg-apple-blue border-apple-blue text-white' : 'border-black/20 dark:border-white/20 hover:border-black/40 dark:hover:border-white/40'}`}
+                        className={`text-left p-4 rounded-[8px] border transition-colors ${isSelected ? 'bg-rausch border-rausch text-white' : 'border-hairline hover:border-ink'}`}
                       >
                          {opt.optionText}
                       </button>
@@ -203,16 +220,16 @@ export default function ActiveExamPage() {
       {phase === 'coding' && codingQuestion && (
          <div className="flex-grow flex flex-col lg:flex-row h-[calc(100vh-48px)]">
             {/* Split Screen Component for Coding block */}
-            <div className="w-full lg:w-1/3 border-r border-black/10 dark:border-white/10 bg-[#f5f5f7] dark:bg-[#1d1d1f] p-6 overflow-y-auto">
+            <div className="w-full lg:w-1/3 border-r border-hairline bg-soft-cloud p-6 overflow-y-auto">
                <h2 className="text-card-title mb-4">{codingQuestion.question_text}</h2>
-               <p className="text-body-standard text-black/80 dark:text-white/80 whitespace-pre-wrap">
+               <p className="text-body-standard text-ash whitespace-pre-wrap">
                  {codingQuestion.description}
                </p>
             </div>
             <div className="w-full lg:w-2/3 flex flex-col bg-[#1e1e1e]">
                <div className="h-[48px] bg-[#2d2d2d] flex justify-between items-center px-4">
                   <select 
-                    className="bg-[#1e1e1e] text-white border border-white/20 rounded px-2 py-1 text-[12px] font-mono outline-none focus:border-apple-blue"
+                    className="bg-[#1e1e1e] text-white border border-white/20 rounded px-2 py-1 text-[12px] font-mono outline-none focus:border-rausch"
                     value={language}
                     onChange={(e: any) => setLanguage(e.target.value)}
                   >

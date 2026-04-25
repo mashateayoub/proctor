@@ -70,8 +70,8 @@ export default function ExamManagementPage() {
           
           <motion.div {...fadeUp} className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
              <div>
-               <h1 className="text-section-heading text-apple-dark dark:text-white mb-2 tracking-tight">Active Assessments.</h1>
-               <p className="text-body-standard text-black/80 dark:text-white/80">Manage, review, or permanently delete your constructed exams.</p>
+               <h1 className="text-section-heading text-ink mb-2 tracking-tight">Active Assessments.</h1>
+               <p className="text-body-standard text-ash">Manage, review, or permanently delete your constructed exams.</p>
              </div>
              <Button variant="primary-blue" onClick={() => router.push('/teacher/create-exam')}>
                Create New Exam
@@ -79,10 +79,10 @@ export default function ExamManagementPage() {
           </motion.div>
 
           {loading ? (
-            <motion.p {...fadeIn} className="text-center text-caption text-black/50 dark:text-white/50 mt-20">Loading registry...</motion.p>
+            <motion.p {...fadeIn} className="text-center text-caption text-ash mt-20">Loading registry...</motion.p>
           ) : exams.length === 0 ? (
-            <motion.div {...scaleIn} className="text-center py-24 bg-white dark:bg-[#1d1d1f] rounded-[8px]">
-              <p className="text-body-standard text-black/80 dark:text-white/80 mb-4">No exams found under your registry.</p>
+            <motion.div {...scaleIn} className="text-center py-24 bg-white rounded-[8px]">
+              <p className="text-body-standard text-ash mb-4">No exams found under your registry.</p>
               <Button variant="pill-link" onClick={() => router.push('/teacher/create-exam')}>Create your first assessment</Button>
             </motion.div>
           ) : (
@@ -104,39 +104,39 @@ export default function ExamManagementPage() {
                       exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
                       layout
                     >
-                      <Card elevated className="flex flex-col h-full bg-white dark:bg-[#272729]" delay={0}>
+                      <Card elevated className="flex flex-col h-full bg-white" delay={0}>
                         <div className="p-8 flex-grow">
                           <div className="flex justify-between items-start mb-4">
-                            <span className={`text-[12px] px-2 py-1 rounded-[4px] font-semibold tracking-tight ${isLive ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-black/5 dark:bg-white/10 text-black/60 dark:text-white/60'}`}>
+                            <span className={`text-[12px] px-2 py-1 rounded-[4px] font-semibold tracking-tight ${isLive ? 'bg-green-100 text-green-800' : 'bg-soft-cloud text-ash'}`}>
                               {isLive ? 'Active' : 'Scheduled / Ended'}
                             </span>
-                            <span className="text-caption font-semibold text-black/40">{exam.duration_minutes}m</span>
+                            <span className="text-caption font-semibold text-mute">{exam.duration_minutes}m</span>
                           </div>
                           
-                          <h3 className="text-[21px] font-bold text-apple-dark dark:text-white mb-2 leading-tight tracking-tight">
+                          <h3 className="text-[21px] font-bold text-ink mb-2 leading-tight tracking-tight">
                             {exam.exam_name}
                           </h3>
-                          <p className="text-caption text-black/60 dark:text-white/60 mb-6 font-mono text-[11px]">
+                          <p className="text-caption text-ash mb-6 font-mono text-[11px]">
                              ID: {exam.id.split('-')[0]}
                           </p>
                           
-                          <div className="flex justify-between items-center bg-apple-gray dark:bg-black/50 border border-black/10 dark:border-white/10 p-3 rounded-[8px] mb-6">
-                            <span className="text-[11px] font-semibold text-black/60 dark:text-white/60 uppercase tracking-wider">Access PIN</span>
-                            <span className="text-[16px] font-mono font-bold text-apple-blue tracking-[4px]">{exam.pin_code || '------'}</span>
+                          <div className="flex justify-between items-center bg-soft-cloud border border-hairline p-3 rounded-[8px] mb-6">
+                            <span className="text-[11px] font-semibold text-ash uppercase tracking-wider">Access PIN</span>
+                            <span className="text-[16px] font-mono font-bold text-rausch tracking-[4px]">{exam.pin_code || '------'}</span>
                           </div>
                           
                           <div className="flex flex-col gap-1 mb-6">
-                            <p className="text-caption text-black/80 dark:text-white/80">
+                            <p className="text-caption text-ash">
                               <span className="opacity-60">Questions:</span> {exam.total_questions}
                             </p>
-                            <p className="text-caption text-black/80 dark:text-white/80">
+                            <p className="text-caption text-ash">
                               <span className="opacity-60">Live:</span> {live.toLocaleDateString()}
                             </p>
                           </div>
                         </div>
                         
-                        <div className="p-8 pt-0 flex justify-between items-center mt-auto border-t border-black/5 dark:border-white/5 pt-4">
-                          <Button variant="pill-link" className="text-red-500 border-red-500 hover:bg-red-50 dark:hover:bg-red-900/20" onClick={() => handleDelete(exam.id)}>
+                        <div className="p-8 pt-0 flex justify-between items-center mt-auto border-t border-hairline pt-4">
+                          <Button variant="pill-link" className="text-red-500 border-red-500 hover:bg-red-50" onClick={() => handleDelete(exam.id)}>
                             Delete
                           </Button>
                           <Button variant="filter" onClick={() => router.push(`/teacher/add-questions?exam=${exam.id}`)}>

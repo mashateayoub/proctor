@@ -22,10 +22,10 @@ export function GlassNav({ links, logoText = "AiProctor", rightAction }: GlassNa
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] as const }}
-      className="fixed top-0 left-0 right-0 z-50 h-[48px] bg-[rgba(0,0,0,0.8)] backdrop-blur-[20px] saturate-180 flex items-center justify-between px-6"
+      className="fixed top-0 left-0 right-0 z-50 h-20 border-b border-hairline bg-white flex items-center justify-between px-6"
     >
       <motion.div {...fadeIn} className="flex items-center gap-2">
-        <Link href="/" className="text-white text-[12px] font-normal leading-none tracking-tight hover:opacity-80 transition-opacity">
+        <Link href="/" className="text-rausch text-[16px] font-bold leading-none hover:text-deep-rausch transition-colors">
           {logoText}
         </Link>
       </motion.div>
@@ -43,7 +43,7 @@ export function GlassNav({ links, logoText = "AiProctor", rightAction }: GlassNa
           >
             <Link 
               href={link.href}
-              className="text-white text-[12px] font-normal leading-none hover:underline underline-offset-4 opacity-90 transition-all"
+              className="text-ink text-[14px] font-medium leading-none hover:underline underline-offset-4 transition-all"
             >
               {link.label}
             </Link>

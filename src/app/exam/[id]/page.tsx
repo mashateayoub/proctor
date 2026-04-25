@@ -6,6 +6,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import { Button } from '@/components/ui/Button';
 import ProctorCamera from '@/components/ProctorCamera';
 import { useExamLockdown, LockdownViolation } from '@/hooks/useExamLockdown';
+import { persistProctoringLog } from '@/lib/proctoringLogs';
 
 // Monaco editor for code block execution
 import Editor from '@monaco-editor/react';
@@ -167,13 +168,17 @@ export default function LockedExamPage() {
       }
     }
 
-    const { error: submitErr } = await supabase.from('results').insert({
-      exam_id: examId,
-      student_id: user.id,
-      mcq_score: Math.round(mcqScore),
-      coding_submissions: codingSubmissions,
-      show_to_student: false,
-    });
+    const { data: result, error: submitErr } = await supabase
+      .from('results')
+      .insert({
+        exam_id: examId,
+        student_id: user.id,
+        mcq_score: Math.round(mcqScore),
+        coding_submissions: codingSubmissions,
+        show_to_student: false,
+      })
+      .select('id')
+      .single();
 
     if (submitErr) {
       console.error('Critical: Failed to save exam submission via RLS', submitErr);
@@ -182,15 +187,8 @@ export default function LockedExamPage() {
       return;
     }
 
-    // ── Persist browser violations into cheating_logs ──
-    if (browserViolations.length > 0) {
-      const { data: currentLog } = await supabase
-        .from('cheating_logs')
-        .select('*')
-        .eq('exam_id', examId)
-        .eq('student_id', user.id)
-        .single();
-
+    // ── Persist browser violations and ensure this take appears in analytics ──
+    {
       const violationCounts = browserViolations.reduce(
         (acc, v) => {
           if (v.type === 'fullscreen_exit') acc.fullscreen_exit++;
@@ -210,24 +208,26 @@ export default function LockedExamPage() {
         detectedAt: new Date(v.timestamp).toISOString(),
       }));
 
-      if (currentLog) {
-        await supabase
-          .from('cheating_logs')
-          .update({
-            prohibited_object_count: (currentLog.prohibited_object_count || 0) + violationCounts.fullscreen_exit + violationCounts.tab_switch + violationCounts.devtools,
-            screenshots: [...(currentLog.screenshots || []), ...browserScreenshots],
-          })
-          .eq('id', currentLog.id);
-      } else {
-        await supabase.from('cheating_logs').insert({
-          exam_id: examId,
-          student_id: user.id,
-          no_face_count: 0,
-          multiple_face_count: 0,
-          cell_phone_count: 0,
-          prohibited_object_count: violationCounts.fullscreen_exit + violationCounts.tab_switch + violationCounts.devtools,
-          screenshots: browserScreenshots,
-        });
+      const { error: logErr } = await persistProctoringLog(supabase, {
+        examId,
+        studentId: user.id,
+        resultId: result.id,
+        increments: {
+          prohibitedObject:
+            violationCounts.fullscreen_exit +
+            violationCounts.tab_switch +
+            violationCounts.clipboard +
+            violationCounts.right_click +
+            violationCounts.devtools +
+            violationCounts.print_screen,
+        },
+        screenshots: browserScreenshots,
+      });
+
+      if (logErr) {
+        alert('Exam submitted, but proctoring analytics failed to sync. Please contact your teacher.');
+        console.error('Critical: Failed to save proctoring analytics', logErr);
+        return;
       }
     }
 
@@ -375,7 +375,7 @@ export default function LockedExamPage() {
                 variant="filter"
                 onClick={() => setCurrentIdx(prev => (prev > 0 ? prev - 1 : 0))}
                 disabled={currentIdx === 0}
-                className="dark:bg-white/5 dark:border-white/10"
+                className="dark:bg-white/5"
               >
                 ← Previous
               </Button>

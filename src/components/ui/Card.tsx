@@ -12,9 +12,8 @@ interface CardProps {
 }
 
 export function Card({ children, className = '', elevated = false, delay = 0 }: CardProps) {
-  // Apple barely uses borders. Elevation comes from the soft wide shadow when needed.
   const elevationStyles = elevated 
-    ? 'shadow-[0_5px_30px_0_rgba(0,0,0,0.22)]' 
+    ? 'airbnb-card-shadow' 
     : 'shadow-none';
 
   return (
@@ -22,7 +21,7 @@ export function Card({ children, className = '', elevated = false, delay = 0 }: 
       initial={scaleIn.initial}
       animate={scaleIn.animate}
       transition={{ ...scaleIn.transition, delay }}
-      className={`bg-apple-gray dark:bg-[#272729] rounded-[8px] border-none overflow-hidden ${elevationStyles} ${className}`}
+      className={`overflow-hidden rounded-[14px] border border-hairline bg-white text-ink ${elevationStyles} ${className}`}
     >
       {children}
     </motion.div>

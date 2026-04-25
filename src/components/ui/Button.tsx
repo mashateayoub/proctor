@@ -1,34 +1,34 @@
 'use client';
 
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, type HTMLMotionProps } from 'framer-motion';
 import { tapSpring } from '@/lib/motion';
 
 type ButtonVariant = 'primary-blue' | 'primary-dark' | 'pill-link' | 'filter' | 'media-control';
 
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface ButtonProps extends Omit<HTMLMotionProps<'button'>, 'children'> {
   variant?: ButtonVariant;
   children: React.ReactNode;
 }
 
 export function Button({ variant = 'primary-blue', children, className = '', ...props }: ButtonProps) {
-  let baseStyles = 'inline-flex cursor-pointer items-center justify-center transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-apple-blue';
+  let baseStyles = 'inline-flex min-h-11 cursor-pointer items-center justify-center whitespace-nowrap transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink disabled:pointer-events-none disabled:opacity-50';
 
   switch (variant) {
     case 'primary-blue':
-      baseStyles += ' bg-apple-blue text-white px-[15px] py-[8px] rounded-[8px] border border-transparent text-[17px] font-normal leading-[1.47] hover:brightness-110 active:bg-[#ededf2] active:text-apple-dark';
+      baseStyles += ' bg-rausch text-white px-6 py-3.5 rounded-[8px] border border-transparent text-[16px] font-medium leading-[1.25] hover:bg-deep-rausch active:scale-[0.92]';
       break;
     case 'primary-dark':
-      baseStyles += ' bg-apple-dark text-white px-[15px] py-[8px] rounded-[8px] text-[17px] font-normal leading-[1.47] hover:bg-black';
+      baseStyles += ' bg-ink text-white px-6 py-3.5 rounded-[8px] text-[16px] font-medium leading-[1.25] hover:bg-charcoal active:scale-[0.92]';
       break;
     case 'pill-link':
-      baseStyles += ' bg-transparent text-apple-link border border-apple-link rounded-[980px] px-[15px] py-[8px] text-[14px] font-normal hover:underline dark:text-apple-link-dark dark:border-apple-link-dark';
+      baseStyles += ' bg-white text-ink border border-hairline rounded-[20px] px-4 py-2 text-[14px] font-medium hover:border-ink active:scale-[0.92]';
       break;
     case 'filter':
-      baseStyles += ' bg-[#fafafc] text-black/80 px-[14px] py-[0px] rounded-[11px] border-[3px] border-black/5 dark:bg-[#272729] dark:text-white dark:border-white/10';
+      baseStyles += ' bg-white text-ink px-4 py-2 rounded-[8px] border border-hairline text-[14px] font-medium hover:border-ink active:scale-[0.92]';
       break;
     case 'media-control':
-      baseStyles += ' bg-[#d2d2d7a3] text-black/48 rounded-full p-3 hover:scale-95 active:scale-90';
+      baseStyles += ' h-11 w-11 rounded-full bg-white text-ink border border-hairline p-0 shadow-[0_0_0_4px_rgb(255,255,255)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] active:scale-[0.92]';
       break;
   }
 

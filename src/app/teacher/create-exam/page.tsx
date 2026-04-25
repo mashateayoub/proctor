@@ -108,14 +108,14 @@ export default function CreateExamPage() {
     router.push('/teacher/dashboard');
   };
 
-  const inputStyles = "w-full bg-[#f5f5f7] dark:bg-black/20 border border-black/10 dark:border-white/10 rounded-[8px] px-[16px] py-[12px] text-body-standard focus:outline-none focus:border-apple-blue transition-colors";
+  const inputStyles = "w-full bg-soft-cloud border border-hairline rounded-[8px] px-[16px] py-[12px] text-body-standard focus:outline-none focus:border-rausch transition-colors";
 
   return (
     <div className="w-full">
         <div className="max-w-[700px] mx-auto">
           <motion.div {...fadeUp} className="mb-10 text-center">
-            <h1 className="text-section-heading text-apple-dark dark:text-white mb-2">New Assessment.</h1>
-            <p className="text-body-standard text-black/80 dark:text-white/80">Configure timeline, constraints, and standard coding structures.</p>
+            <h1 className="text-section-heading text-ink mb-2">New Assessment.</h1>
+            <p className="text-body-standard text-ash">Configure timeline, constraints, and standard coding structures.</p>
           </motion.div>
 
           <motion.form
@@ -139,11 +139,11 @@ export default function CreateExamPage() {
             </AnimatePresence>
             
             {/* Base Meta Settings */}
-            <Card elevated className="p-8 bg-white dark:bg-[#272729]" delay={0.05}>
-               <h3 className="text-card-title text-apple-dark dark:text-white mb-6 tracking-tight">Timeline & Details</h3>
+            <Card elevated className="p-8 bg-white" delay={0.05}>
+               <h3 className="text-card-title text-ink mb-6 tracking-tight">Timeline & Details</h3>
                <div className="flex flex-col gap-5">
                  <div>
-                    <label className="text-caption text-black/80 dark:text-white/80 mb-1 block">Course or Assessment Name</label>
+                    <label className="text-caption text-ash mb-1 block">Course or Assessment Name</label>
                     <input
                       required
                       type="text"
@@ -155,7 +155,7 @@ export default function CreateExamPage() {
                  </div>
                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-caption text-black/80 dark:text-white/80 mb-1 block">Duration (Minutes)</label>
+                      <label className="text-caption text-ash mb-1 block">Duration (Minutes)</label>
                       <input
                         required
                         type="number"
@@ -166,7 +166,7 @@ export default function CreateExamPage() {
                       />
                     </div>
                     <div>
-                      <label className="text-caption text-black/80 dark:text-white/80 mb-1 block">Total MCQ Count</label>
+                      <label className="text-caption text-ash mb-1 block">Total MCQ Count</label>
                       <input
                         required
                         type="number"
@@ -179,7 +179,7 @@ export default function CreateExamPage() {
                  </div>
                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-caption text-black/80 dark:text-white/80 mb-1 block">Live Date</label>
+                      <label className="text-caption text-ash mb-1 block">Live Date</label>
                       <input
                         required
                         type="datetime-local"
@@ -189,7 +189,7 @@ export default function CreateExamPage() {
                       />
                     </div>
                     <div>
-                      <label className="text-caption text-black/80 dark:text-white/80 mb-1 block">Dead Date</label>
+                      <label className="text-caption text-ash mb-1 block">Dead Date</label>
                       <input
                         required
                         type="datetime-local"
@@ -203,12 +203,12 @@ export default function CreateExamPage() {
             </Card>
 
             {/* Attached Programming Scenario */}
-            <Card elevated className="p-8 bg-white dark:bg-[#272729]" delay={0.15}>
-               <h3 className="text-card-title text-apple-dark dark:text-white mb-2 tracking-tight">Programming Challenge</h3>
-               <p className="text-caption text-black/60 dark:text-white/60 mb-6">Attach an optional comprehensive coding problem to the end of this exam.</p>
+            <Card elevated className="p-8 bg-white" delay={0.15}>
+               <h3 className="text-card-title text-ink mb-2 tracking-tight">Programming Challenge</h3>
+               <p className="text-caption text-ash mb-6">Attach an optional comprehensive coding problem to the end of this exam.</p>
                <div className="flex flex-col gap-5">
                  <div>
-                    <label className="text-caption text-black/80 dark:text-white/80 mb-1 block">Short Title / Objective</label>
+                    <label className="text-caption text-ash mb-1 block">Short Title / Objective</label>
                     <input
                       type="text"
                       className={inputStyles}
@@ -218,7 +218,7 @@ export default function CreateExamPage() {
                     />
                  </div>
                  <div>
-                    <label className="text-caption text-black/80 dark:text-white/80 mb-1 block">Extended Description & Testing Requirements</label>
+                    <label className="text-caption text-ash mb-1 block">Extended Description & Testing Requirements</label>
                     <textarea
                       rows={5}
                       className={`${inputStyles} resize-none`}
@@ -239,14 +239,14 @@ export default function CreateExamPage() {
                   exit={{ opacity: 0, height: 0 }}
                   transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] as const }}
                 >
-                  <Card elevated className="p-8 bg-white dark:bg-[#272729]" delay={0}>
+                  <Card elevated className="p-8 bg-white" delay={0}>
                     <div className="flex justify-between items-center mb-2">
-                      <h3 className="text-card-title text-apple-dark dark:text-white tracking-tight">Test Suite</h3>
-                      <span className="text-[12px] font-mono text-black/40 dark:text-white/40">
+                      <h3 className="text-card-title text-ink tracking-tight">Test Suite</h3>
+                      <span className="text-[12px] font-mono text-mute">
                         {testCases.length} test{testCases.length !== 1 ? 's' : ''}
                       </span>
                     </div>
-                    <p className="text-caption text-black/60 dark:text-white/60 mb-6">
+                    <p className="text-caption text-ash mb-6">
                       Define input/output pairs. The student&apos;s code will receive the input via <strong>stdin</strong> and 
                       must print the expected output to <strong>stdout</strong>.
                     </p>
@@ -266,10 +266,10 @@ export default function CreateExamPage() {
                             exit={{ opacity: 0, y: -10, scale: 0.95 }}
                             transition={{ duration: 0.25 }}
                             layout
-                            className="bg-[#f5f5f7] dark:bg-black/20 border border-black/5 dark:border-white/5 rounded-[10px] p-5"
+                            className="bg-soft-cloud border border-hairline rounded-[10px] p-5"
                           >
                             <div className="flex justify-between items-center mb-3">
-                              <span className="text-[12px] font-mono text-black/40 dark:text-white/40 uppercase tracking-wider">
+                              <span className="text-[12px] font-mono text-mute uppercase tracking-wider">
                                 Test Case #{idx + 1}
                               </span>
                               <motion.button
@@ -285,10 +285,10 @@ export default function CreateExamPage() {
 
                             <div className="flex flex-col gap-3">
                               <div>
-                                <label className="text-[11px] text-black/50 dark:text-white/50 mb-1 block uppercase tracking-wider">Label (optional)</label>
+                                <label className="text-[11px] text-ash mb-1 block uppercase tracking-wider">Label (optional)</label>
                                 <input
                                   type="text"
-                                  className="w-full bg-white dark:bg-[#1a1a1a] border border-black/10 dark:border-white/10 rounded-[6px] px-3 py-2 text-[13px] focus:outline-none focus:border-apple-blue"
+                                  className="w-full bg-white border border-hairline rounded-[6px] px-3 py-2 text-[13px] focus:outline-none focus:border-rausch"
                                   placeholder="e.g. Basic addition"
                                   value={tc.label}
                                   onChange={e => updateTestCase(idx, 'label', e.target.value)}
@@ -296,24 +296,24 @@ export default function CreateExamPage() {
                               </div>
                               <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                  <label className="text-[11px] text-black/50 dark:text-white/50 mb-1 block uppercase tracking-wider">
+                                  <label className="text-[11px] text-ash mb-1 block uppercase tracking-wider">
                                     Input (stdin)
                                   </label>
                                   <textarea
                                     rows={2}
-                                    className="w-full resize-none bg-white dark:bg-[#1a1a1a] border border-black/10 dark:border-white/10 rounded-[6px] px-3 py-2 text-[13px] font-mono focus:outline-none focus:border-apple-blue"
+                                    className="w-full resize-none bg-white border border-hairline rounded-[6px] px-3 py-2 text-[13px] font-mono focus:outline-none focus:border-rausch"
                                     placeholder={"5\\n3"}
                                     value={tc.input}
                                     onChange={e => updateTestCase(idx, 'input', e.target.value)}
                                   />
                                 </div>
                                 <div>
-                                  <label className="text-[11px] text-black/50 dark:text-white/50 mb-1 block uppercase tracking-wider">
+                                  <label className="text-[11px] text-ash mb-1 block uppercase tracking-wider">
                                     Expected Output (stdout)
                                   </label>
                                   <textarea
                                     rows={2}
-                                    className="w-full resize-none bg-white dark:bg-[#1a1a1a] border border-black/10 dark:border-white/10 rounded-[6px] px-3 py-2 text-[13px] font-mono focus:outline-none focus:border-apple-blue"
+                                    className="w-full resize-none bg-white border border-hairline rounded-[6px] px-3 py-2 text-[13px] font-mono focus:outline-none focus:border-rausch"
                                     placeholder="8"
                                     value={tc.expectedOutput}
                                     onChange={e => updateTestCase(idx, 'expectedOutput', e.target.value)}
@@ -328,9 +328,9 @@ export default function CreateExamPage() {
                       <motion.button
                         type="button"
                         onClick={addTestCase}
-                        whileHover={{ borderColor: '#0071e3', color: '#0071e3', scale: 1.01 }}
+                        whileHover={{ borderColor: '#ff385c', color: '#ff385c', scale: 1.01 }}
                         whileTap={{ scale: 0.99 }}
-                        className="w-full py-3 border-2 border-dashed border-black/10 dark:border-white/10 rounded-[10px] text-[13px] font-semibold text-black/40 dark:text-white/40 transition-colors"
+                        className="w-full py-3 border-2 border-dashed border-hairline rounded-[10px] text-[13px] font-semibold text-mute transition-colors"
                       >
                         + Add Test Case
                       </motion.button>

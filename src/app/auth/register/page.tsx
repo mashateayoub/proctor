@@ -47,15 +47,15 @@ export default function RegisterPage() {
     }
   };
 
-  const inputClass = "w-full bg-white dark:bg-[#272729] border border-black/10 dark:border-white/10 rounded-[11px] px-[16px] py-[15px] text-body-standard focus:outline-none focus:border-apple-blue focus:ring-1 focus:ring-apple-blue transition-colors";
+  const inputClass = "airbnb-input w-full px-4 py-[14px] text-body-standard transition-colors";
 
   return (
     <>
-      <main className="flex min-h-screen items-center justify-center bg-apple-gray dark:bg-black pt-12 px-6">
-        <motion.div {...scaleIn} className="w-full max-w-[400px]">
+      <main className="flex min-h-screen items-center justify-center bg-soft-cloud px-6 py-12 text-ink">
+        <motion.div {...scaleIn} className="w-full max-w-[420px] rounded-[20px] border border-hairline bg-white p-8 airbnb-card-shadow">
           <motion.div {...fadeUp} className="text-center mb-10">
-            <h1 className="text-section-heading text-apple-dark dark:text-white mb-2">Create Account.</h1>
-            <p className="text-body-standard text-black/80 dark:text-white/80">Get started with AiProctor today.</p>
+            <h1 className="text-section-heading mb-2">Create account</h1>
+            <p className="text-body-standard text-ash">Get started with AiProctor today.</p>
           </motion.div>
 
           <motion.form
@@ -71,7 +71,7 @@ export default function RegisterPage() {
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -10 }}
-                  className="text-center text-red-500 text-caption"
+                  className="text-center text-error text-caption"
                 >
                   {error}
                 </motion.p>
@@ -117,12 +117,12 @@ export default function RegisterPage() {
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
-                  className="w-full appearance-none bg-white dark:bg-[#272729] border border-black/10 dark:border-white/10 rounded-[11px] px-[16px] py-[15px] text-body-standard focus:outline-none focus:border-apple-blue focus:ring-1 focus:ring-apple-blue cursor-pointer"
+                  className="airbnb-input w-full cursor-pointer appearance-none px-4 py-[14px] text-body-standard"
                 >
                   <option value="student">I am a Student</option>
                   <option value="teacher">I am a Teacher</option>
                 </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-black/50 dark:text-white/50">
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-ash">
                   ▼
                 </div>
               </motion.div>
@@ -135,11 +135,11 @@ export default function RegisterPage() {
             <motion.div
               {...fadeIn}
               transition={{ ...fadeIn.transition, delay: 0.4 }}
-              className="text-center mt-2 border-t border-black/10 pt-6"
+              className="text-center mt-2 border-t border-hairline pt-6"
             >
-              <p className="text-caption text-black/80 dark:text-white/80">
+              <p className="text-caption text-ash">
                 Already registered?{' '}
-                <Link href="/auth/login" className="text-apple-link hover:underline">
+                <Link href="/auth/login" className="font-semibold text-ink underline-offset-4 hover:underline">
                   Sign in
                 </Link>
                 .

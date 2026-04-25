@@ -35,8 +35,8 @@ export default function ExamInstructionsPage() {
     if (examId) fetchExam();
   }, [examId, supabase]);
 
-  if (loading) return <div className="min-h-screen bg-apple-gray dark:bg-black pt-32 text-center text-apple-dark dark:text-white">Authenticating schema...</div>;
-  if (!exam) return <div className="min-h-screen bg-apple-gray dark:bg-black pt-32 text-center text-apple-dark dark:text-white">Exam not found.</div>;
+  if (loading) return <div className="min-h-screen bg-soft-cloud pt-32 text-center text-ink">Authenticating schema...</div>;
+  if (!exam) return <div className="min-h-screen bg-soft-cloud pt-32 text-center text-ink">Exam not found.</div>;
 
   return (
     <>
@@ -45,34 +45,34 @@ export default function ExamInstructionsPage() {
         links={[{label: 'Dashboard', href: '/student/dashboard'}]} 
       />
 
-      <main className="bg-apple-gray dark:bg-black min-h-screen pt-24 pb-12 px-6">
+      <main className="bg-soft-cloud min-h-screen pt-24 pb-12 px-6">
         <div className="max-w-[800px] mx-auto">
           
           <div className="mb-10 text-center">
-             <h1 className="text-display-hero text-apple-dark dark:text-white mb-4 tracking-tight leading-none text-[48px]">
+             <h1 className="text-display-hero text-ink mb-4 tracking-tight leading-none text-[48px]">
                {exam.exam_name}
              </h1>
-             <p className="text-body-standard text-black/60 dark:text-white/60">
+             <p className="text-body-standard text-ash">
                Please review the testing protocol below before initializing the proctoring engine.
              </p>
           </div>
 
-          <Card elevated className="bg-white dark:bg-[#1d1d1f] p-10 mb-8">
-             <div className="flex flex-col gap-6 text-body-standard text-apple-dark dark:text-white">
-                <div className="grid grid-cols-2 gap-4 pb-6 border-b border-black/10 dark:border-white/10">
+          <Card elevated className="bg-white p-10 mb-8">
+             <div className="flex flex-col gap-6 text-body-standard text-ink">
+                <div className="grid grid-cols-2 gap-4 pb-6 border-b border-hairline">
                    <div>
-                     <span className="text-caption text-black/50 dark:text-white/50 block mb-1">Time Limit</span>
+                     <span className="text-caption text-ash block mb-1">Time Limit</span>
                      <span className="font-semibold text-[21px]">{exam.duration_minutes} Minutes</span>
                    </div>
                    <div>
-                     <span className="text-caption text-black/50 dark:text-white/50 block mb-1">Total Questions</span>
+                     <span className="text-caption text-ash block mb-1">Total Questions</span>
                      <span className="font-semibold text-[21px]">{exam.total_questions} MCQs + 1 Coding</span>
                    </div>
                 </div>
 
                 <div>
                   <h3 className="text-card-title mb-4">Academic Integrity Rules</h3>
-                  <ul className="list-disc pl-5 flex flex-col gap-3 text-black/80 dark:text-white/80">
+                  <ul className="list-disc pl-5 flex flex-col gap-3 text-ash">
                      <li>You must remain in the camera frame for the entire duration of the assessment.</li>
                      <li>Multiple persons detected in the frame will instantly flag the session.</li>
                      <li>Use of cellular devices or prohibited electronics is strictly forbidden and actively tracked.</li>
@@ -88,11 +88,11 @@ export default function ExamInstructionsPage() {
              <label className="flex items-center gap-3 cursor-pointer">
                 <input 
                   type="checkbox" 
-                  className="w-5 h-5 rounded-[4px] border-black/20 accent-[#0071e3]"
+                  className="w-5 h-5 rounded-[4px] border-hairline accent-[#ff385c]"
                   checked={certified}
                   onChange={(e) => setCertified(e.target.checked)}
                 />
-                <span className="text-caption text-black/80 dark:text-white/80 select-none">
+                <span className="text-caption text-ash select-none">
                   I certify I have read the protocol and agree to active webcam proctoring.
                 </span>
              </label>
