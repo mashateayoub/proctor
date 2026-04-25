@@ -39,3 +39,15 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+
+
+# autoskills
+skills-lock.json
+.agents
+.codex
+.mcp    
+.kiro
+
+# design system
+docs/design.md
