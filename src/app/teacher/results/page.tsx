@@ -27,16 +27,36 @@ export default function ResultsPage() {
     const { data, error } = await supabase
       .from('results')
       .select(`
-        id, mcq_score, coding_submissions, coding_grade, show_to_student, created_at,
+        id, mcq_score, coding_submissions, coding_grade, show_to_student, 
+        created_at, started_at, status,
         exams ( exam_name ),
         users ( name, email )
       `)
-      .order('created_at', { ascending: false });
+      .order('started_at', { ascending: false });
 
     if (data && !error) {
       setResults(data);
     }
     setLoading(false);
+  };
+
+  const getRelativeTime = (date: string) => {
+    const now = new Date();
+    const then = new Date(date);
+    const diffInSeconds = Math.floor((now.getTime() - then.getTime()) / 1000);
+    
+    if (diffInSeconds < 60) return 'just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    return then.toLocaleDateString();
+  };
+
+  const getDuration = (start: string, end: string | null) => {
+    if (!start) return '--';
+    const startTime = new Date(start).getTime();
+    const endTime = end ? new Date(end).getTime() : new Date().getTime();
+    const diffInMinutes = Math.floor((endTime - startTime) / 60000);
+    return `${diffInMinutes} min`;
   };
 
   const toggleVisibility = async (id: string, currentStatus: boolean) => {
@@ -78,86 +98,110 @@ export default function ResultsPage() {
 
   return (
     <>
-      <div className="w-full">
-        <div className="max-w-[1200px] mx-auto">
+      <div className="w-full px-8">
+        <div className="max-w-[1440px] mx-auto">
           
-          <motion.div {...fadeUp} className="mb-12">
-             <h1 className="text-section-heading text-ink mb-2 tracking-tight">Examination Results.</h1>
+          <motion.div {...fadeUp} className="mb-10">
+             <h1 className="text-display-hero text-ink mb-2 tracking-tight text-[32px]">Examination Results.</h1>
              <p className="text-body-standard text-ash max-w-[600px]">
-               View quantitative outcomes, inspect and grade coding submissions, and publish grades.
+               Monitor live sessions, inspect coding artifacts, and manage grade publishing.
              </p>
           </motion.div>
 
           <motion.div {...scaleIn} transition={{ ...scaleIn.transition, delay: 0.1 }}>
-            <Card elevated className="bg-white">
+            <Card elevated className="bg-white overflow-hidden border-hairline">
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="border-b border-hairline">
-                      <th className="px-6 py-4 text-caption font-semibold text-ash">Student</th>
-                      <th className="px-6 py-4 text-caption font-semibold text-ash">Exam</th>
-                      <th className="px-6 py-4 text-caption font-semibold text-ash">MCQ Score</th>
-                      <th className="px-6 py-4 text-caption font-semibold text-ash">Coding Grade</th>
-                      <th className="px-6 py-4 text-caption font-semibold text-ash text-right">Code Review</th>
-                      <th className="px-6 py-4 text-caption font-semibold text-ash text-right">Visibility</th>
+                    <tr className="border-b border-hairline bg-soft-cloud/30">
+                      <th className="px-6 py-3 text-[11px] font-bold text-ash uppercase tracking-wider">Student</th>
+                      <th className="px-6 py-3 text-[11px] font-bold text-ash uppercase tracking-wider">Session</th>
+                      <th className="px-6 py-3 text-[11px] font-bold text-ash uppercase tracking-wider">Exam</th>
+                      <th className="px-6 py-3 text-[11px] font-bold text-ash uppercase tracking-wider text-center">Scores</th>
+                      <th className="px-6 py-3 text-[11px] font-bold text-ash uppercase tracking-wider text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="text-body-standard text-ink">
+                  <tbody className="text-[13px] text-ink">
                     {loading ? (
-                       <tr><td colSpan={6} className="text-center py-12 text-ash">Loading results...</td></tr>
+                       <tr><td colSpan={5} className="text-center py-12 text-ash">Loading results...</td></tr>
                     ) : results.length === 0 ? (
-                       <tr><td colSpan={6} className="text-center py-12 text-ash">No exam results found for your schemas.</td></tr>
+                       <tr><td colSpan={5} className="text-center py-12 text-ash font-mono text-[12px]">No take records initialized.</td></tr>
                     ) : (
                       results.map((r, idx) => (
                         <motion.tr
                           key={r.id}
                           {...tableRowVariant}
-                          transition={{ ...tableRowVariant.transition, delay: idx * 0.04 }}
-                          className="border-b border-hairline hover:bg-soft-cloud transition-colors"
+                          transition={{ ...tableRowVariant.transition, delay: idx * 0.03 }}
+                          className="border-b border-hairline hover:bg-soft-cloud/40 transition-colors group"
                         >
                           <td className="px-6 py-4">
-                            <div className="flex flex-col">
-                              <span className="font-semibold text-[14px]">{r.users?.name || 'Unknown'}</span>
-                              <span className="text-[12px] text-ash">{r.users?.email}</span>
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-rausch/10 text-rausch flex items-center justify-center font-bold text-[12px]">
+                                {r.users?.name?.[0] || '?'}
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="font-semibold text-ink leading-tight">{r.users?.name || 'Unknown'}</span>
+                                <span className="text-[11px] text-ash">{r.users?.email}</span>
+                              </div>
                             </div>
                           </td>
-                          <td className="px-6 py-4 text-[14px]">{r.exams?.exam_name}</td>
                           <td className="px-6 py-4">
-                             <span className={`text-[12px] px-2 py-1 rounded-[4px] font-semibold ${r.mcq_score >= 50 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                                {r.mcq_score}%
-                             </span>
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center gap-2">
+                                {r.status === 'in_progress' ? (
+                                  <>
+                                    <span className="relative flex h-2 w-2">
+                                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                      <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                                    </span>
+                                    <span className="text-green-600 font-bold text-[11px] uppercase tracking-tighter">In Progress</span>
+                                  </>
+                                ) : (
+                                  <span className="text-ash font-medium text-[11px] uppercase tracking-tighter">Completed</span>
+                                )}
+                              </div>
+                              <div className="text-[11px] text-ash font-mono">
+                                {getRelativeTime(r.started_at)} • {getDuration(r.started_at, r.status === 'completed' ? r.created_at : null)}
+                              </div>
+                            </div>
                           </td>
+                          <td className="px-6 py-4 font-medium">{r.exams?.exam_name}</td>
                           <td className="px-6 py-4">
-                            {r.coding_submissions && r.coding_submissions.length > 0 ? (
-                              <span className={`text-[12px] px-2 py-1 rounded-[4px] font-semibold ${gradeColors[r.coding_grade || 'pending']}`}>
-                                {gradeLabels[r.coding_grade || 'pending']}
-                              </span>
-                            ) : (
-                              <span className="text-[12px] text-stone">N/A</span>
-                            )}
+                            <div className="flex items-center justify-center gap-2">
+                              <div className={`flex flex-col items-center justify-center w-[48px] h-[36px] rounded-[6px] border ${r.mcq_score >= 50 ? 'border-green-100 bg-green-50 text-green-700' : 'border-red-100 bg-red-50 text-red-700'}`}>
+                                <span className="text-[10px] font-bold uppercase opacity-60">MCQ</span>
+                                <span className="text-[13px] font-bold -mt-1">{r.mcq_score}%</span>
+                              </div>
+                              <div className={`flex flex-col items-center justify-center w-[48px] h-[36px] rounded-[6px] border ${r.coding_submissions && r.coding_submissions.length > 0 ? (r.coding_grade === 'passed' ? 'border-green-100 bg-green-50 text-green-700' : r.coding_grade === 'failed' ? 'border-red-100 bg-red-50 text-red-700' : 'border-yellow-100 bg-yellow-50 text-yellow-700') : 'border-hairline bg-soft-cloud text-stone'}`}>
+                                <span className="text-[10px] font-bold uppercase opacity-60">CODE</span>
+                                <span className="text-[13px] font-bold -mt-1">
+                                  {r.coding_submissions && r.coding_submissions.length > 0 ? (r.coding_grade === 'passed' ? 'P' : r.coding_grade === 'failed' ? 'F' : '...') : '--'}
+                                </span>
+                              </div>
+                            </div>
                           </td>
                           <td className="px-6 py-4 text-right">
-                            <Button 
-                              variant="filter" 
-                              className="h-[30px] text-[12px]"
-                              onClick={() => setSelectedCode({
-                                submissions: r.coding_submissions || [],
-                                resultId: r.id,
-                                currentGrade: r.coding_grade || 'pending'
-                              })}
-                              disabled={!r.coding_submissions || r.coding_submissions.length === 0}
-                            >
-                              Inspect & Grade
-                            </Button>
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                             <Button 
-                               variant={r.show_to_student ? 'filter' : 'primary-blue'} 
-                               className="h-[30px] text-[12px]"
-                               onClick={() => toggleVisibility(r.id, r.show_to_student)}
-                             >
-                                {r.show_to_student ? 'Hide from Student' : 'Publish Result'}
-                             </Button>
+                             <div className="flex justify-end gap-2">
+                               <Button 
+                                 variant="filter" 
+                                 className="h-[32px] px-3 text-[11px]"
+                                 onClick={() => setSelectedCode({
+                                   submissions: r.coding_submissions || [],
+                                   resultId: r.id,
+                                   currentGrade: r.coding_grade || 'pending'
+                                 })}
+                                 disabled={!r.coding_submissions || r.coding_submissions.length === 0}
+                               >
+                                 Review
+                               </Button>
+                               <Button 
+                                 variant={r.show_to_student ? 'filter' : 'primary-blue'} 
+                                 className="h-[32px] px-3 text-[11px]"
+                                 onClick={() => toggleVisibility(r.id, r.show_to_student)}
+                               >
+                                  {r.show_to_student ? 'Unpublish' : 'Publish'}
+                               </Button>
+                             </div>
                           </td>
                         </motion.tr>
                       ))

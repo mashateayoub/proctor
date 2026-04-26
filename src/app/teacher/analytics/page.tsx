@@ -53,7 +53,6 @@ export default function AnalyticsPage() {
   const [logs, setLogs] = useState<CheatingLog[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // Modal State
   const [selectedScreenshots, setSelectedScreenshots] = useState<{ url: string; type: string; detectedAt: string }[] | null>(null);
 
   useEffect(() => {
@@ -67,20 +66,19 @@ export default function AnalyticsPage() {
     const { data: resultsData, error: resultsError } = await supabase
       .from('results')
       .select(`
-        id, exam_id, student_id, created_at,
+        id, exam_id, student_id, started_at, status, created_at,
         exams ( exam_name ),
         users ( name, email )
       `)
-      .order('created_at', { ascending: false });
+      .order('started_at', { ascending: false });
 
     if (resultsError || !resultsData) {
-      console.error('Failed to fetch analytics source results', resultsError);
       setLogs([]);
       setLoading(false);
       return;
     }
 
-    const results = resultsData as unknown as ResultRow[];
+    const results = resultsData as any[];
     const resultIds = results.map((result) => result.id);
     const logsByResultId = new Map<string, LogRow>();
 
@@ -90,10 +88,8 @@ export default function AnalyticsPage() {
         .select('id, result_id, exam_id, student_id, no_face_count, multiple_face_count, cell_phone_count, prohibited_object_count, screenshots, created_at')
         .in('result_id', resultIds);
 
-      if (logError) {
-        console.error('Failed to fetch proctoring logs', logError);
-      } else {
-        ((logData || []) as unknown as LogRow[]).forEach((log) => {
+      if (logData) {
+        (logData as any[]).forEach((log) => {
           if (log.result_id) logsByResultId.set(log.result_id, log);
         });
       }
@@ -102,7 +98,7 @@ export default function AnalyticsPage() {
     setLogs(results.map((result) => {
       const log = logsByResultId.get(result.id);
       return {
-        id: log?.id || result.id,
+        id: log?.id || `temp-${result.id}`,
         result_id: result.id,
         exam_id: result.exam_id,
         no_face_count: log?.no_face_count || 0,
@@ -112,10 +108,11 @@ export default function AnalyticsPage() {
         screenshots: log?.screenshots || [],
         exams: result.exams,
         users: result.users,
-        created_at: log?.created_at || result.created_at,
+        created_at: result.started_at,
         submitted_at: result.created_at,
-      };
-    }) as CheatingLog[]);
+        status: result.status
+      } as any;
+    }));
 
     setLoading(false);
   };
@@ -128,8 +125,8 @@ export default function AnalyticsPage() {
 
   return (
     <>
-      <div className="w-full">
-        <div className="max-w-[1200px] mx-auto">
+      <div className="w-full px-8">
+        <div className="max-w-[1440px] mx-auto">
           
           <motion.div {...fadeUp} className="mb-8">
              <h1 className="text-[28px] font-display font-bold text-[var(--color-ink)] mb-2 tracking-tight">Analytics.</h1>
@@ -161,7 +158,7 @@ export default function AnalyticsPage() {
                     ) : (
                       logs.map((log, idx) => (
                         <motion.tr
-                          key={log.id}
+                          key={log.result_id}
                           {...tableRowVariant}
                           transition={{ ...tableRowVariant.transition, delay: idx * 0.04 }}
                           className="border-b border-[var(--color-hairline)] hover:bg-[var(--color-soft-cloud)]/40 transition-colors"
