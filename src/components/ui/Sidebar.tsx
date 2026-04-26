@@ -28,9 +28,9 @@ export function Sidebar({ roleTitle, links }: SidebarProps) {
       <motion.div
         {...fadeIn}
         transition={{ ...fadeIn.transition, delay: 0.2 }}
-        className="h-20 flex items-center px-6 font-bold text-[18px] text-rausch"
+        className="h-20 flex items-center px-6 font-display font-bold text-[20px] text-[var(--color-rausch)] tracking-tight"
       >
-        AiProctor <span className="font-medium text-ash ml-1">{roleTitle}</span>
+        AiProctor <span className="font-sans font-semibold text-[var(--color-ash)] ml-2 text-[14px] uppercase tracking-widest">{roleTitle}</span>
       </motion.div>
       
       <motion.nav
@@ -45,7 +45,7 @@ export function Sidebar({ roleTitle, links }: SidebarProps) {
             <motion.div key={link.href} variants={slideLeft}>
               <Link 
                 href={link.href}
-                className={`block rounded-[20px] px-4 py-3 text-[14px] font-medium transition-colors ${isActive ? 'bg-soft-cloud text-ink shadow-[inset_0_0_0_1px_#dddddd]' : 'text-ash hover:bg-soft-cloud hover:text-ink'}`}
+                className={`block rounded-[12px] px-4 py-3 text-[14px] font-semibold transition-all ${isActive ? 'bg-[var(--color-soft-cloud)] text-[var(--color-ink)] shadow-sm border border-[var(--color-hairline)]' : 'text-[var(--color-ash)] hover:bg-[var(--color-soft-cloud)] hover:text-[var(--color-ink)]'}`}
               >
                 {link.label}
               </Link>
@@ -57,9 +57,9 @@ export function Sidebar({ roleTitle, links }: SidebarProps) {
       <motion.div
         {...fadeIn}
         transition={{ ...fadeIn.transition, delay: 0.5 }}
-        className="p-4 border-t border-hairline"
+        className="p-4 border-t border-[var(--color-hairline)]"
       >
-        <p className="text-center text-[10px] font-medium text-mute">Secure Engine v1.0</p>
+        <p className="text-center text-[10px] font-bold text-[var(--color-mute)] uppercase tracking-tighter">Secure Engine v1.0</p>
       </motion.div>
     </motion.aside>
   );

@@ -24,8 +24,8 @@
   --color-apple-link: #222222;
   --color-apple-link-dark: #222222;
   
-  --font-display: "Airbnb Cereal VF", Circular, -apple-system, system-ui, Roboto, "Helvetica Neue", sans-serif;
-  --font-body: "Airbnb Cereal VF", Circular, -apple-system, system-ui, Roboto, "Helvetica Neue", sans-serif;
+  --font-display: var(--font-outfit), sans-serif;
+  --font-body: var(--font-inter), sans-serif;
 }
 
 :root {

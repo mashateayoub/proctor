@@ -1,39 +1,23 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, Outfit } from "next/font/google";
 import "./globals.css";
 
-
-// src/app/layout.tsx  ← add this at the very top, outside the component
-if (typeof window !== 'undefined') {
-  const _log = window.console.log;
-  const _warn = window.console.warn;
-  const _info = window.console.info;
-  const silence = (fn: (...a: unknown[]) => void) => (...args: unknown[]) => {
-    const msg = args.join(' ');
-    if (msg.includes('XNNPACK') || msg.includes('gl_context') || msg.includes('face_landmarker') || msg.includes('inference_feedback')) return;
-    fn.apply(window.console, args);
-  };
-  window.console.log = silence(_log);
-  window.console.warn = silence(_warn);
-  window.console.info = silence(_info);
-}
-
-
-
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
+  display: 'swap',
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const outfit = Outfit({
+  variable: "--font-outfit",
   subsets: ["latin"],
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
-  title: "AiProctor",
-  description: "Secure online exam proctoring and assessment management.",
+  title: "AiProctor | AI-Driven Exam Integrity",
+  description: "Experience the next generation of academic integrity with secure, automated AI proctoring and assessment management.",
+  keywords: ["AI Proctoring", "Exam Integrity", "Online Assessment", "Secure Testing"],
 };
 
 export default function RootLayout({
@@ -45,9 +29,27 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${inter.variable} ${outfit.variable} h-full antialiased`}
     >
-      <body suppressHydrationWarning className="min-h-full flex flex-col">{children}</body>
+      <body suppressHydrationWarning className="min-h-full flex flex-col font-sans">
+        {children}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if (typeof window !== 'undefined') {
+                const silence = (fn) => (...args) => {
+                  const msg = args.join(' ');
+                  if (msg.includes('XNNPACK') || msg.includes('gl_context') || msg.includes('face_landmarker')) return;
+                  fn.apply(console, args);
+                };
+                console.log = silence(console.log);
+                console.warn = silence(console.warn);
+                console.info = silence(console.info);
+              }
+            `,
+          }}
+        />
+      </body>
     </html>
   );
 }
