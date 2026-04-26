@@ -12,8 +12,8 @@ const metrics = [
 
 export function TrustMetrics() {
   return (
-    <section className="py-20 px-8 bg-[var(--color-soft-cloud)]">
-      <div className="max-w-[1440px] mx-auto">
+    <section className="py-12 bg-[var(--color-soft-cloud)]">
+      <div className="max-w-[1440px] mx-auto px-8">
         <motion.div 
           variants={staggerContainer}
           initial="initial"

@@ -9,7 +9,7 @@ export function LandingHeader() {
   const router = useRouter();
 
   return (
-    <header className="absolute top-0 left-0 right-0 z-50 flex items-center justify-between px-8 py-6 max-w-[1440px] mx-auto">
+    <header className="absolute top-0 left-0 right-0 z-50 flex items-center justify-between px-8 py-4 max-w-[1440px] mx-auto">
       <motion.div {...fadeIn} className="flex items-center gap-3 cursor-pointer" onClick={() => router.push('/')}>
         <div className="w-8 h-8 rounded-full bg-[var(--color-rausch)] flex items-center justify-center">
           <div className="w-3 h-3 bg-white rounded-full" />

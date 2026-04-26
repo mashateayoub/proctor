@@ -39,11 +39,11 @@ const features = [
 
 export function FeatureHighlights() {
   return (
-    <section className="py-32 px-8 bg-white">
-      <div className="max-w-[1440px] mx-auto">
-        <div className="flex flex-col md:flex-row justify-between items-end mb-20 gap-8">
+    <section className="py-20 bg-white">
+      <div className="max-w-[1440px] mx-auto px-8">
+        <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-8">
           <div className="max-w-[600px]">
-            <h2 className="text-[48px] font-display font-bold text-[var(--color-ink)] leading-[1.1] mb-6">
+            <h2 className="text-[36px] font-display font-bold text-[var(--color-ink)] leading-[1.1] mb-4">
               Precision proctoring for <br />
               <span className="text-[var(--color-mute)]">modern education.</span>
             </h2>

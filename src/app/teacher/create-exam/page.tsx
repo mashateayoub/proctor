@@ -108,30 +108,30 @@ export default function CreateExamPage() {
     router.push('/teacher/dashboard');
   };
 
-  const inputStyles = "w-full bg-soft-cloud border border-hairline rounded-[8px] px-[16px] py-[12px] text-body-standard focus:outline-none focus:border-rausch transition-colors";
+  const inputStyles = "w-full bg-[var(--color-soft-cloud)] border border-[var(--color-hairline)] rounded-[8px] px-4 py-2.5 text-[14px] font-medium focus:outline-none focus:border-[var(--color-rausch)] transition-all";
 
   return (
     <div className="w-full">
         <div className="max-w-[700px] mx-auto">
-          <motion.div {...fadeUp} className="mb-10 text-center">
-            <h1 className="text-section-heading text-ink mb-2">New Assessment.</h1>
-            <p className="text-body-standard text-ash">Configure timeline, constraints, and standard coding structures.</p>
+          <motion.div {...fadeUp} className="mb-6 text-center">
+            <h1 className="text-[28px] font-display font-bold text-[var(--color-ink)] mb-2">New Assessment.</h1>
+            <p className="text-[14px] text-[var(--color-ash)] font-medium">Configure timeline, constraints, and programming tasks.</p>
           </motion.div>
 
           <motion.form
             onSubmit={handleCreate}
-            className="flex flex-col gap-8"
-            initial={{ opacity: 0, y: 20 }}
+            className="flex flex-col gap-6"
+            initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1, ease: [0.25, 0.46, 0.45, 0.94] as const }}
+            transition={{ duration: 0.4, delay: 0.1, ease: [0.25, 0.46, 0.45, 0.94] as const }}
           >
-            <AnimatePresence>
+            <AnimatePresence mode="wait">
               {error && (
                 <motion.p
                   initial={{ opacity: 0, y: -5 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -5 }}
-                  className="text-center text-red-500 text-caption font-semibold"
+                  className="text-center text-[var(--color-error)] text-[12px] font-bold"
                 >
                   {error}
                 </motion.p>
@@ -139,11 +139,11 @@ export default function CreateExamPage() {
             </AnimatePresence>
             
             {/* Base Meta Settings */}
-            <Card elevated className="p-8 bg-white" delay={0.05}>
-               <h3 className="text-card-title text-ink mb-6 tracking-tight">Timeline & Details</h3>
-               <div className="flex flex-col gap-5">
+            <Card elevated className="p-6 bg-white rounded-[16px]" delay={0.05}>
+               <h3 className="text-[18px] font-display font-bold text-[var(--color-ink)] mb-6 tracking-tight">Timeline & Details</h3>
+               <div className="flex flex-col gap-4">
                  <div>
-                    <label className="text-caption text-ash mb-1 block">Course or Assessment Name</label>
+                    <label className="text-[11px] font-bold text-[var(--color-ash)] uppercase tracking-wider mb-1 block">Course or Assessment Name</label>
                     <input
                       required
                       type="text"
@@ -155,7 +155,7 @@ export default function CreateExamPage() {
                  </div>
                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-caption text-ash mb-1 block">Duration (Minutes)</label>
+                      <label className="text-[11px] font-bold text-[var(--color-ash)] uppercase tracking-wider mb-1 block">Duration (Minutes)</label>
                       <input
                         required
                         type="number"
@@ -166,7 +166,7 @@ export default function CreateExamPage() {
                       />
                     </div>
                     <div>
-                      <label className="text-caption text-ash mb-1 block">Total MCQ Count</label>
+                      <label className="text-[11px] font-bold text-[var(--color-ash)] uppercase tracking-wider mb-1 block">Total MCQ Count</label>
                       <input
                         required
                         type="number"
@@ -179,7 +179,7 @@ export default function CreateExamPage() {
                  </div>
                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-caption text-ash mb-1 block">Live Date</label>
+                      <label className="text-[11px] font-bold text-[var(--color-ash)] uppercase tracking-wider mb-1 block">Live Date</label>
                       <input
                         required
                         type="datetime-local"
@@ -189,7 +189,7 @@ export default function CreateExamPage() {
                       />
                     </div>
                     <div>
-                      <label className="text-caption text-ash mb-1 block">Dead Date</label>
+                      <label className="text-[11px] font-bold text-[var(--color-ash)] uppercase tracking-wider mb-1 block">Dead Date</label>
                       <input
                         required
                         type="datetime-local"
@@ -203,12 +203,12 @@ export default function CreateExamPage() {
             </Card>
 
             {/* Attached Programming Scenario */}
-            <Card elevated className="p-8 bg-white" delay={0.15}>
-               <h3 className="text-card-title text-ink mb-2 tracking-tight">Programming Challenge</h3>
-               <p className="text-caption text-ash mb-6">Attach an optional comprehensive coding problem to the end of this exam.</p>
-               <div className="flex flex-col gap-5">
+            <Card elevated className="p-6 bg-white rounded-[16px]" delay={0.15}>
+               <h3 className="text-[18px] font-display font-bold text-[var(--color-ink)] mb-2 tracking-tight">Programming Challenge</h3>
+               <p className="text-[12px] text-[var(--color-ash)] mb-6 font-medium">Attach an optional coding problem to the end of this exam.</p>
+               <div className="flex flex-col gap-4">
                  <div>
-                    <label className="text-caption text-ash mb-1 block">Short Title / Objective</label>
+                    <label className="text-[11px] font-bold text-[var(--color-ash)] uppercase tracking-wider mb-1 block">Short Title / Objective</label>
                     <input
                       type="text"
                       className={inputStyles}
@@ -218,11 +218,11 @@ export default function CreateExamPage() {
                     />
                  </div>
                  <div>
-                    <label className="text-caption text-ash mb-1 block">Extended Description & Testing Requirements</label>
+                    <label className="text-[11px] font-bold text-[var(--color-ash)] uppercase tracking-wider mb-1 block">Extended Description</label>
                     <textarea
-                      rows={5}
+                      rows={4}
                       className={`${inputStyles} resize-none`}
-                      placeholder="Specify inputs, outputs, and any algorithmic boundaries..."
+                      placeholder="Specify boundaries, constraints, and requirements..."
                       value={codingQuestion.description}
                       onChange={e => setCodingQuestion({...codingQuestion, description: e.target.value})}
                     />
@@ -239,82 +239,68 @@ export default function CreateExamPage() {
                   exit={{ opacity: 0, height: 0 }}
                   transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] as const }}
                 >
-                  <Card elevated className="p-8 bg-white" delay={0}>
+                  <Card elevated className="p-6 bg-white rounded-[16px]" delay={0}>
                     <div className="flex justify-between items-center mb-2">
-                      <h3 className="text-card-title text-ink tracking-tight">Test Suite</h3>
-                      <span className="text-[12px] font-mono text-mute">
-                        {testCases.length} test{testCases.length !== 1 ? 's' : ''}
+                      <h3 className="text-[18px] font-display font-bold text-[var(--color-ink)] tracking-tight">Test Suite</h3>
+                      <span className="text-[10px] font-bold text-[var(--color-mute)] uppercase tracking-widest">
+                        {testCases.length} CASE{testCases.length !== 1 ? 'S' : ''}
                       </span>
                     </div>
-                    <p className="text-caption text-ash mb-6">
-                      Define input/output pairs. The student&apos;s code will receive the input via <strong>stdin</strong> and 
-                      must print the expected output to <strong>stdout</strong>.
+                    <p className="text-[12px] text-[var(--color-ash)] mb-6 font-medium leading-relaxed">
+                      Define input/output pairs. The system will pipe <strong>stdin</strong> and expect specific <strong>stdout</strong> results.
                     </p>
 
                     <motion.div
                       variants={staggerContainer}
                       initial="initial"
                       animate="animate"
-                      className="flex flex-col gap-4"
+                      className="flex flex-col gap-3"
                     >
                       <AnimatePresence>
                         {testCases.map((tc, idx) => (
                           <motion.div
                             key={idx}
-                            initial={{ opacity: 0, y: 16, scale: 0.98 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                            transition={{ duration: 0.25 }}
-                            layout
-                            className="bg-soft-cloud border border-hairline rounded-[10px] p-5"
+                            initial={{ opacity: 0, scale: 0.98 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.98 }}
+                            className="bg-[var(--color-soft-cloud)] border border-[var(--color-hairline)] rounded-[10px] p-4"
                           >
                             <div className="flex justify-between items-center mb-3">
-                              <span className="text-[12px] font-mono text-mute uppercase tracking-wider">
-                                Test Case #{idx + 1}
+                              <span className="text-[10px] font-bold text-[var(--color-mute)] uppercase tracking-widest">
+                                Case #{idx + 1}
                               </span>
                               <motion.button
                                 type="button"
-                                whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
                                 onClick={() => removeTestCase(idx)}
-                                className="text-[11px] text-red-500 hover:text-red-700 font-semibold transition-colors"
+                                className="text-[10px] text-[var(--color-rausch)] font-bold uppercase tracking-wider hover:underline"
                               >
                                 Remove
                               </motion.button>
                             </div>
 
                             <div className="flex flex-col gap-3">
-                              <div>
-                                <label className="text-[11px] text-ash mb-1 block uppercase tracking-wider">Label (optional)</label>
-                                <input
-                                  type="text"
-                                  className="w-full bg-white border border-hairline rounded-[6px] px-3 py-2 text-[13px] focus:outline-none focus:border-rausch"
-                                  placeholder="e.g. Basic addition"
-                                  value={tc.label}
-                                  onChange={e => updateTestCase(idx, 'label', e.target.value)}
-                                />
-                              </div>
                               <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                  <label className="text-[11px] text-ash mb-1 block uppercase tracking-wider">
-                                    Input (stdin)
+                                  <label className="text-[10px] font-bold text-[var(--color-ash)] mb-1 block uppercase tracking-widest">
+                                    Input
                                   </label>
                                   <textarea
                                     rows={2}
-                                    className="w-full resize-none bg-white border border-hairline rounded-[6px] px-3 py-2 text-[13px] font-mono focus:outline-none focus:border-rausch"
-                                    placeholder={"5\\n3"}
+                                    className="w-full resize-none bg-white border border-[var(--color-hairline)] rounded-[6px] px-3 py-2 text-[13px] font-mono font-medium focus:outline-none focus:border-[var(--color-rausch)]"
+                                    placeholder="stdin"
                                     value={tc.input}
                                     onChange={e => updateTestCase(idx, 'input', e.target.value)}
                                   />
                                 </div>
                                 <div>
-                                  <label className="text-[11px] text-ash mb-1 block uppercase tracking-wider">
-                                    Expected Output (stdout)
+                                  <label className="text-[10px] font-bold text-[var(--color-ash)] mb-1 block uppercase tracking-widest">
+                                    Output
                                   </label>
                                   <textarea
                                     rows={2}
-                                    className="w-full resize-none bg-white border border-hairline rounded-[6px] px-3 py-2 text-[13px] font-mono focus:outline-none focus:border-rausch"
-                                    placeholder="8"
+                                    className="w-full resize-none bg-white border border-[var(--color-hairline)] rounded-[6px] px-3 py-2 text-[13px] font-mono font-medium focus:outline-none focus:border-[var(--color-rausch)]"
+                                    placeholder="stdout"
                                     value={tc.expectedOutput}
                                     onChange={e => updateTestCase(idx, 'expectedOutput', e.target.value)}
                                   />
@@ -328,11 +314,11 @@ export default function CreateExamPage() {
                       <motion.button
                         type="button"
                         onClick={addTestCase}
-                        whileHover={{ borderColor: '#ff385c', color: '#ff385c', scale: 1.01 }}
-                        whileTap={{ scale: 0.99 }}
-                        className="w-full py-3 border-2 border-dashed border-hairline rounded-[10px] text-[13px] font-semibold text-mute transition-colors"
+                        whileHover={{ borderColor: '#ff385c', color: '#ff385c', scale: 1.005 }}
+                        whileTap={{ scale: 0.995 }}
+                        className="w-full py-2.5 border-2 border-dashed border-[var(--color-hairline)] rounded-[10px] text-[13px] font-bold text-[var(--color-mute)] transition-all hover:bg-[var(--color-rausch)]/5"
                       >
-                        + Add Test Case
+                        + Add Case
                       </motion.button>
                     </motion.div>
                   </Card>
@@ -343,11 +329,11 @@ export default function CreateExamPage() {
             <motion.div
               {...fadeIn}
               transition={{ ...fadeIn.transition, delay: 0.3 }}
-              className="flex justify-end gap-4 mt-4"
+              className="flex justify-end gap-3 mt-2"
             >
-              <Button type="button" variant="pill-link" onClick={() => router.back()}>Cancel</Button>
-              <Button type="submit" variant="primary-blue" disabled={loading} className="w-[140px]">
-                 {loading ? 'Committing...' : 'Publish Draft'}
+              <Button type="button" variant="pill" onClick={() => router.back()}>Cancel</Button>
+              <Button type="submit" variant="primary" disabled={loading} className="w-[140px]">
+                 {loading ? 'Publishing...' : 'Publish Draft'}
               </Button>
             </motion.div>
           </motion.form>

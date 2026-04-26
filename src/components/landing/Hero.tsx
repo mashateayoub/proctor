@@ -6,11 +6,11 @@ import { fadeUp, staggerContainer, staggerItem } from '@/lib/motion';
 
 export function Hero() {
   return (
-    <section className="relative pt-32 pb-20 px-8 overflow-hidden bg-[var(--color-canvas)]">
+    <section className="relative pt-24 pb-16 overflow-hidden bg-[var(--color-canvas)]">
       {/* Abstract Background Element */}
       <div className="absolute top-[-10%] right-[-10%] w-[600px] h-[600px] bg-[var(--color-soft-cloud)] rounded-full blur-[100px] -z-10 opacity-60" />
       
-      <div className="max-w-[1440px] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+      <div className="max-w-[1440px] mx-auto px-8 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
         <motion.div 
           variants={staggerContainer}
           initial="initial"
@@ -39,8 +39,8 @@ export function Hero() {
           </motion.p>
 
           <motion.div variants={staggerItem} className="flex items-center gap-4 pt-4">
-            <Button variant="primary" className="h-[56px] px-8 text-[18px]">Launch Platform</Button>
-            <Button variant="pill" className="h-[56px] px-8 text-[18px]">See Live Demo</Button>
+            <Button variant="primary">Launch Platform</Button>
+            <Button variant="pill">See Live Demo</Button>
           </motion.div>
         </motion.div>
 

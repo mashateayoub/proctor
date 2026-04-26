@@ -37,8 +37,8 @@ export async function middleware(request: NextRequest) {
     const isTeacherRoute = request.nextUrl.pathname.startsWith('/teacher');
     const isRootRoute = request.nextUrl.pathname === '/';
 
-    if (!user && (isStudentRoute || isTeacherRoute || isRootRoute)) {
-        // No user, redirect to login
+    if (!user && (isStudentRoute || isTeacherRoute)) {
+        // No user, redirect to login for protected routes
         const url = request.nextUrl.clone();
         url.pathname = '/auth/login';
         return NextResponse.redirect(url);
@@ -47,8 +47,8 @@ export async function middleware(request: NextRequest) {
     if (user) {
         const role = user.user_metadata?.role || 'student';
 
-        // Prevent authenticated users from visiting auth pages or the root path
-        if (isAuthRoute || isRootRoute) {
+        // Prevent authenticated users from visiting auth pages
+        if (isAuthRoute) {
             const url = request.nextUrl.clone();
             url.pathname = role === 'teacher' ? '/teacher/dashboard' : '/student/dashboard';
             return NextResponse.redirect(url);

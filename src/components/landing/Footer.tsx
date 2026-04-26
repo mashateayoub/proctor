@@ -2,8 +2,8 @@
 
 export function Footer() {
   return (
-    <footer className="py-20 px-8 bg-[var(--color-soft-cloud)] border-t border-[var(--color-hairline)]">
-      <div className="max-w-[1440px] mx-auto grid grid-cols-1 md:grid-cols-4 gap-12">
+    <footer className="py-12 bg-[var(--color-soft-cloud)] border-t border-[var(--color-hairline)]">
+      <div className="max-w-[1440px] mx-auto px-8 grid grid-cols-1 md:grid-cols-4 gap-10">
         <div className="flex flex-col gap-6">
            <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-[var(--color-rausch)] flex items-center justify-center">
@@ -17,37 +17,37 @@ export function Footer() {
         </div>
 
         <div>
-           <h4 className="text-[14px] font-bold text-[var(--color-ink)] uppercase tracking-wider mb-6">Product</h4>
-           <ul className="flex flex-col gap-4 text-[14px] text-[var(--color-ash)] font-medium">
-              <li className="hover:text-[var(--color-ink)] cursor-pointer">Live Proctoring</li>
-              <li className="hover:text-[var(--color-ink)] cursor-pointer">Automated AI</li>
-              <li className="hover:text-[var(--color-ink)] cursor-pointer">ID Verification</li>
-              <li className="hover:text-[var(--color-ink)] cursor-pointer">Lockdown Browser</li>
+           <h4 className="text-[14px] font-bold text-[var(--color-ink)] uppercase tracking-wider mb-4">Product</h4>
+           <ul className="flex flex-col gap-3 text-[14px] text-[var(--color-ash)] font-medium">
+              <li className="hover:text-[var(--color-ink)] cursor-pointer transition-colors">Live Proctoring</li>
+              <li className="hover:text-[var(--color-ink)] cursor-pointer transition-colors">Automated AI</li>
+              <li className="hover:text-[var(--color-ink)] cursor-pointer transition-colors">ID Verification</li>
+              <li className="hover:text-[var(--color-ink)] cursor-pointer transition-colors">Lockdown Browser</li>
            </ul>
         </div>
 
         <div>
-           <h4 className="text-[14px] font-bold text-[var(--color-ink)] uppercase tracking-wider mb-6">Company</h4>
-           <ul className="flex flex-col gap-4 text-[14px] text-[var(--color-ash)] font-medium">
-              <li className="hover:text-[var(--color-ink)] cursor-pointer">About Us</li>
-              <li className="hover:text-[var(--color-ink)] cursor-pointer">Careers</li>
-              <li className="hover:text-[var(--color-ink)] cursor-pointer">Privacy Policy</li>
-              <li className="hover:text-[var(--color-ink)] cursor-pointer">Terms of Service</li>
+           <h4 className="text-[14px] font-bold text-[var(--color-ink)] uppercase tracking-wider mb-4">Company</h4>
+           <ul className="flex flex-col gap-3 text-[14px] text-[var(--color-ash)] font-medium">
+              <li className="hover:text-[var(--color-ink)] cursor-pointer transition-colors">About Us</li>
+              <li className="hover:text-[var(--color-ink)] cursor-pointer transition-colors">Careers</li>
+              <li className="hover:text-[var(--color-ink)] cursor-pointer transition-colors">Privacy Policy</li>
+              <li className="hover:text-[var(--color-ink)] cursor-pointer transition-colors">Terms of Service</li>
            </ul>
         </div>
 
         <div>
-           <h4 className="text-[14px] font-bold text-[var(--color-ink)] uppercase tracking-wider mb-6">Support</h4>
-           <ul className="flex flex-col gap-4 text-[14px] text-[var(--color-ash)] font-medium">
-              <li className="hover:text-[var(--color-ink)] cursor-pointer">Documentation</li>
-              <li className="hover:text-[var(--color-ink)] cursor-pointer">Help Center</li>
-              <li className="hover:text-[var(--color-ink)] cursor-pointer">Contact Support</li>
-              <li className="hover:text-[var(--color-ink)] cursor-pointer">System Status</li>
+           <h4 className="text-[14px] font-bold text-[var(--color-ink)] uppercase tracking-wider mb-4">Support</h4>
+           <ul className="flex flex-col gap-3 text-[14px] text-[var(--color-ash)] font-medium">
+              <li className="hover:text-[var(--color-ink)] cursor-pointer transition-colors">Documentation</li>
+              <li className="hover:text-[var(--color-ink)] cursor-pointer transition-colors">Help Center</li>
+              <li className="hover:text-[var(--color-ink)] cursor-pointer transition-colors">Contact Support</li>
+              <li className="hover:text-[var(--color-ink)] cursor-pointer transition-colors">System Status</li>
            </ul>
         </div>
       </div>
       
-      <div className="max-w-[1440px] mx-auto mt-20 pt-8 border-t border-[var(--color-hairline)] flex flex-col md:flex-row justify-between items-center gap-6">
+      <div className="max-w-[1440px] mx-auto px-8 mt-12 pt-8 border-t border-[var(--color-hairline)] flex flex-col md:flex-row justify-between items-center gap-6">
          <span className="text-[12px] text-[var(--color-mute)] font-medium">
             © 2026 AiProctor Technologies Inc. All rights reserved.
          </span>
