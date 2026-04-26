@@ -24,8 +24,8 @@
   --color-apple-link: #222222;
   --color-apple-link-dark: #222222;
   
-  --font-display: "Airbnb Cereal VF", Circular, -apple-system, system-ui, Roboto, "Helvetica Neue", sans-serif;
-  --font-body: "Airbnb Cereal VF", Circular, -apple-system, system-ui, Roboto, "Helvetica Neue", sans-serif;
+  --font-display: var(--font-outfit), sans-serif;
+  --font-body: var(--font-inter), sans-serif;
 }
 
 :root {
@@ -46,58 +46,54 @@ body {
 
 .text-display-hero {
   font-family: var(--font-display);
-  font-size: clamp(2.5rem, 5vw, 3.5rem);
+  font-size: clamp(2rem, 4vw, 2.75rem);
   font-weight: 700;
-  line-height: 1.12;
-  letter-spacing: 0;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
 }
 
 .text-section-heading {
   font-family: var(--font-display);
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 700;
-  line-height: 1.43;
-  letter-spacing: 0;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
 }
 
 .text-card-title {
   font-family: var(--font-display);
-  font-size: 21px;
+  font-size: 18px;
   font-weight: 700;
-  line-height: 1.43;
-  letter-spacing: 0;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
 }
 
 .text-nav-heading {
   font-family: var(--font-body);
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
-  line-height: 1.25;
-  letter-spacing: 0;
+  line-height: 1.2;
 }
 
 .text-body-standard {
   font-family: var(--font-body);
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 500;
-  line-height: 1.43;
-  letter-spacing: 0;
+  line-height: 1.5;
 }
 
 .text-body-emphasis {
   font-family: var(--font-body);
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
-  line-height: 1.25;
-  letter-spacing: 0;
+  line-height: 1.4;
 }
 
 .text-caption {
   font-family: var(--font-body);
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 500;
-  line-height: 1.29;
-  letter-spacing: 0;
+  line-height: 1.3;
 }
 
 .airbnb-card-shadow {

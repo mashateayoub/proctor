@@ -181,8 +181,13 @@ export default function LockedExamPage() {
       .single();
 
     if (submitErr) {
-      console.error('Critical: Failed to save exam submission via RLS', submitErr);
-      alert('Error submitting exam! Please try again.');
+      console.error('Critical: Failed to save exam submission', {
+        error: submitErr,
+        message: submitErr.message,
+        details: submitErr.details,
+        hint: submitErr.hint
+      });
+      alert(`Error submitting exam: ${submitErr.message || 'Please try again.'}`);
       setPhase('mcq');
       return;
     }
