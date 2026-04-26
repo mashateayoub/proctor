@@ -36,6 +36,7 @@ export default function ActiveExamPage() {
 
   // Timer
   const [timeLeft, setTimeLeft] = useState(0);
+  const [takeId, setTakeId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -54,7 +55,41 @@ export default function ActiveExamPage() {
       const { data: cData } = await supabase.from('coding_questions').select('*').eq('exam_id', examId);
       if (cData && cData.length > 0) setCodingQuestion(cData[0]);
     };
-    if (examId) fetchData();
+    if (examId) {
+      fetchData();
+      
+      // Initialize or Resume Take
+      const initTake = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data: activeTake } = await supabase
+          .from('results')
+          .select('id')
+          .eq('exam_id', examId)
+          .eq('student_id', user.id)
+          .eq('status', 'in_progress')
+          .maybeSingle();
+
+        if (activeTake) {
+          setTakeId(activeTake.id);
+        } else {
+          const { data: newTake } = await supabase
+            .from('results')
+            .insert({
+              exam_id: examId,
+              student_id: user.id,
+              status: 'in_progress',
+              mcq_score: 0,
+              show_to_student: false
+            })
+            .select('id')
+            .single();
+          if (newTake) setTakeId(newTake.id);
+        }
+      };
+      initTake();
+    }
   }, [examId, supabase]);
 
   useEffect(() => {
@@ -116,13 +151,12 @@ export default function ActiveExamPage() {
 
     const { data: result, error: submitErr } = await supabase
       .from('results')
-      .insert({
-        exam_id: examId,
-        student_id: user.id,
+      .update({
         mcq_score: Math.round(mcqScore),
         coding_submissions: codingSubmissions,
-        show_to_student: false
+        status: 'completed'
       })
+      .eq('id', takeId)
       .select('id')
       .single();
 
@@ -136,7 +170,7 @@ export default function ActiveExamPage() {
     const { error: logErr } = await persistProctoringLog(supabase, {
       examId,
       studentId: user.id,
-      resultId: result.id,
+      takeId: result.id,
     });
 
     if (logErr) {
@@ -163,14 +197,14 @@ export default function ActiveExamPage() {
         <div className="flex items-center gap-6">
           <span className="font-mono text-[21px] font-bold">{timeString}</span>
            <div className="bg-black/30 rounded-[4px] overflow-hidden w-[60px] h-[36px] relative">
-              <ProctorCamera width={60} height={36} examId={examId} />
+              <ProctorCamera width={60} height={36} examId={examId} takeId={takeId || undefined} />
            </div>
         </div>
       </div>
 
-      {phase === 'mcq' && questions.length > 0 && (
-         <div className="flex-grow flex items-center justify-center p-6">
-           <div className="w-full max-w-[800px] bg-white rounded-[12px] p-8 shadow-[0_5px_30px_0_rgba(0,0,0,0.22)]">
+       {phase === 'mcq' && questions.length > 0 && (
+          <div className="flex-grow flex items-center justify-center p-6">
+            <div className="w-full max-w-[800px] bg-white rounded-[12px] p-6 shadow-2xl border border-hairline">
               <div className="flex justify-between items-center mb-8 border-b border-hairline pb-4">
                 <span className="text-caption text-ash font-semibold">Question {currentIdx + 1} of {questions.length}</span>
               </div>
@@ -194,25 +228,26 @@ export default function ActiveExamPage() {
                  })}
               </div>
 
-              <div className="flex justify-between mt-auto">
-                 <Button 
-                   variant="filter" 
-                   onClick={() => setCurrentIdx(prev => prev > 0 ? prev - 1 : 0)}
-                   disabled={currentIdx === 0}
-                 >
-                    Previous
-                 </Button>
-
-                 {currentIdx === questions.length - 1 ? (
-                   <Button variant="primary-blue" onClick={() => codingQuestion ? setPhase('coding') : handleSubmit()}>
-                      {codingQuestion ? 'Proceed to Coding Phase' : 'Final Submit Exam'}
-                   </Button>
-                 ) : (
-                   <Button variant="primary-blue" onClick={() => setCurrentIdx(prev => prev + 1)}>
-                      Next
-                   </Button>
-                 )}
-              </div>
+               <div className="flex justify-between mt-auto">
+                  <Button 
+                    variant="filter" 
+                    onClick={() => setCurrentIdx(prev => prev > 0 ? prev - 1 : 0)}
+                    disabled={currentIdx === 0}
+                    className="h-[42px]"
+                  >
+                     Previous
+                  </Button>
+ 
+                  {currentIdx === questions.length - 1 ? (
+                    <Button variant="primary-blue" className="h-[42px]" onClick={() => codingQuestion ? setPhase('coding') : handleSubmit()}>
+                       {codingQuestion ? 'Proceed to Coding Phase' : '✓ Submit Exam'}
+                    </Button>
+                  ) : (
+                    <Button variant="primary-blue" className="h-[42px]" onClick={() => setCurrentIdx(prev => prev + 1)}>
+                       Next
+                    </Button>
+                  )}
+               </div>
            </div>
          </div>
       )}
@@ -238,8 +273,8 @@ export default function ActiveExamPage() {
                      <option value="java">Java (OpenJDK)</option>
                   </select>
                   <div className="flex gap-2">
-                     <Button variant="pill-link" className="text-white border-white border text-[12px] py-1" onClick={handleRunCode}>Run Code</Button>
-                     <Button variant="primary-blue" className="py-1 text-[12px]" onClick={handleSubmit}>Submit Test</Button>
+                     <Button variant="pill-link" className="text-white border-white border text-[12px] h-[32px] px-3" onClick={handleRunCode}>Run Code</Button>
+                     <Button variant="primary-blue" className="h-[32px] px-4 text-[12px]" onClick={handleSubmit}>Submit Test</Button>
                   </div>
                </div>
                

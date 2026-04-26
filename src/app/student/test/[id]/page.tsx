@@ -45,11 +45,11 @@ export default function ExamInstructionsPage() {
         links={[{label: 'Dashboard', href: '/student/dashboard'}]} 
       />
 
-      <main className="bg-soft-cloud min-h-screen pt-24 pb-12 px-6">
+      <main className="bg-soft-cloud min-h-screen pt-20 pb-12 px-6">
         <div className="max-w-[800px] mx-auto">
           
-          <div className="mb-10 text-center">
-             <h1 className="text-display-hero text-ink mb-4 tracking-tight leading-none text-[48px]">
+          <div className="mb-8 text-center">
+             <h1 className="text-display-hero text-ink mb-4 tracking-tight leading-none text-[32px]">
                {exam.exam_name}
              </h1>
              <p className="text-body-standard text-ash">
@@ -57,7 +57,7 @@ export default function ExamInstructionsPage() {
              </p>
           </div>
 
-          <Card elevated className="bg-white p-10 mb-8">
+          <Card elevated className="bg-white p-6 mb-8">
              <div className="flex flex-col gap-6 text-body-standard text-ink">
                 <div className="grid grid-cols-2 gap-4 pb-6 border-b border-hairline">
                    <div>
@@ -99,7 +99,7 @@ export default function ExamInstructionsPage() {
 
              <Button 
                variant="primary-blue" 
-               className="w-full max-w-[300px] h-[56px] text-[18px]" 
+               className="w-full max-w-[300px] h-[42px] text-[15px]" 
                disabled={!certified}
                onClick={() => router.push(`/exam/${examId}`)}
              >

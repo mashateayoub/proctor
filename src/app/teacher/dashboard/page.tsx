@@ -10,7 +10,7 @@ export default function TeacherDashboard() {
 
   return (
     <div className="w-full">
-        <section className="w-full rounded-[20px] border border-hairline bg-white px-6 py-16 text-center airbnb-card-shadow">
+        <section className="w-full rounded-[20px] border border-hairline bg-white px-6 py-10 text-center airbnb-card-shadow">
           <motion.p {...fadeIn} className="mb-3 text-[12px] font-bold tracking-[0.32px] text-rausch">
             TEACHER WORKSPACE
           </motion.p>

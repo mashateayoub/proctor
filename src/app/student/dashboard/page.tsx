@@ -72,7 +72,7 @@ export default function StudentDashboard() {
 
   return (
     <div className="w-full">
-      <section className="w-full rounded-[20px] border border-hairline bg-white px-6 py-16 text-center airbnb-card-shadow">
+      <section className="w-full rounded-[20px] border border-hairline bg-white px-6 py-10 text-center airbnb-card-shadow">
         <motion.p {...fadeIn} className="mb-3 text-[12px] font-bold tracking-[0.32px] text-rausch">
           STUDENT GATEWAY
         </motion.p>
@@ -95,16 +95,16 @@ export default function StudentDashboard() {
           className="flex flex-col md:flex-row gap-4 items-center justify-center max-w-[500px] w-full"
         >
            <motion.input
-             whileFocus={{ scale: 1.02, borderColor: '#ff385c' }}
+             whileFocus={{ scale: 1.01, borderColor: '#ff385c' }}
              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
              type="text" 
              placeholder="ENTER PIN (e.g. A9F2K1)" 
              value={pinCode}
              onChange={(e) => setPinCode(e.target.value.toUpperCase())}
              maxLength={6}
-             className="w-full bg-white border border-hairline rounded-[12px] px-[24px] py-[16px] text-[18px] font-mono font-bold tracking-[4px] text-center focus:outline-none focus:border-rausch shadow-sm text-ink"
+             className="w-full bg-white border border-hairline rounded-[10px] px-6 py-3 text-[16px] font-mono font-bold tracking-[4px] text-center focus:outline-none focus:border-rausch shadow-sm text-ink h-[42px]"
            />
-           <Button type="submit" variant="primary-blue" disabled={loading} className="py-[16px] px-[32px] whitespace-nowrap h-full min-h-[58px]">
+           <Button type="submit" variant="primary-blue" disabled={loading} className="px-8 whitespace-nowrap h-[42px]">
              {loading ? 'Verifying...' : 'Unlock'}
            </Button>
         </motion.form>
@@ -130,7 +130,7 @@ export default function StudentDashboard() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 40 }}
             transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] as const }}
-            className="w-full bg-white py-24 px-6 border-t border-hairline"
+            className="w-full bg-white py-12 px-6 border-t border-hairline"
           >
             <div className="max-w-[700px] mx-auto">
               <motion.h2
@@ -142,7 +142,7 @@ export default function StudentDashboard() {
               </motion.h2>
               
               <Card elevated className="flex flex-col overflow-hidden bg-soft-cloud" delay={0.2}>
-                <div className="p-10">
+                <div className="p-6">
                   <motion.span {...fadeIn} transition={{ ...fadeIn.transition, delay: 0.3 }} className="text-caption font-semibold text-rausch mb-2 block">{unlockedExam.teacher_name}</motion.span>
                   <motion.h3 {...fadeUp} transition={{ ...fadeUp.transition, delay: 0.35 }} className="text-card-title text-ink mb-4">{unlockedExam.exam_name}</motion.h3>
                   <motion.div
@@ -164,7 +164,7 @@ export default function StudentDashboard() {
                 <motion.div
                   {...fadeIn}
                   transition={{ ...fadeIn.transition, delay: 0.5 }}
-                  className="p-8 bg-soft-cloud flex flex-col items-center border-t border-hairline"
+                  className="p-6 bg-soft-cloud flex flex-col items-center border-t border-hairline"
                 >
                    {isExamMissed(unlockedExam.dead_date) ? (
                       <div className="w-full text-center">
@@ -184,7 +184,7 @@ export default function StudentDashboard() {
                       <Button 
                         variant="primary-blue" 
                         onClick={() => router.push(`/student/test/${unlockedExam.id}`)}
-                        className="w-full max-w-[300px] py-4 text-[16px]"
+                        className="w-full max-w-[300px] h-[42px] text-[15px]"
                       >
                         Initialize Secure Session
                       </Button>
@@ -197,7 +197,7 @@ export default function StudentDashboard() {
       </AnimatePresence>
 
       {/* Proctoring Pre-Warm */}
-      <section className="w-full bg-soft-cloud py-24 px-6 border-t border-hairline">
+      <section className="w-full bg-soft-cloud py-12 px-6 border-t border-hairline">
         <div className="max-w-[980px] mx-auto">
           <motion.h2
             {...fadeUp}

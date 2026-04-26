@@ -40,6 +40,7 @@ export default function LockedExamPage() {
 
   // ── Browser violations stored in memory to batch-push at submit ──
   const [browserViolations, setBrowserViolations] = useState<LockdownViolation[]>([]);
+  const [takeId, setTakeId] = useState<string | null>(null);
 
   const handleViolation = useCallback((v: LockdownViolation) => {
     setBrowserViolations(prev => [...prev, v]);
@@ -65,7 +66,48 @@ export default function LockedExamPage() {
       const { data: cData } = await supabase.from('coding_questions').select('*').eq('exam_id', examId);
       if (cData && cData.length > 0) setCodingQuestion(cData[0]);
     };
-    if (examId) fetchData();
+    if (examId) {
+      fetchData();
+      
+      // ── Initialize or Resume "Exam Take" ──
+      const initTake = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        // Check for active take
+        const { data: activeTake } = await supabase
+          .from('results')
+          .select('id')
+          .eq('exam_id', examId)
+          .eq('student_id', user.id)
+          .eq('status', 'in_progress')
+          .maybeSingle();
+
+        if (activeTake) {
+          setTakeId(activeTake.id);
+        } else {
+          // Create new take
+          const { data: newTake, error: takeErr } = await supabase
+            .from('results')
+            .insert({
+              exam_id: examId,
+              student_id: user.id,
+              status: 'in_progress',
+              mcq_score: 0,
+              show_to_student: false
+            })
+            .select('id')
+            .single();
+          
+          if (takeErr) {
+            console.error('Failed to initialize exam take:', takeErr);
+          } else if (newTake) {
+            setTakeId(newTake.id);
+          }
+        }
+      };
+      initTake();
+    }
   }, [examId, supabase]);
 
   // ── Timer ──
@@ -170,13 +212,12 @@ export default function LockedExamPage() {
 
     const { data: result, error: submitErr } = await supabase
       .from('results')
-      .insert({
-        exam_id: examId,
-        student_id: user.id,
+      .update({
         mcq_score: Math.round(mcqScore),
         coding_submissions: codingSubmissions,
-        show_to_student: false,
+        status: 'completed',
       })
+      .eq('id', takeId)
       .select('id')
       .single();
 
@@ -211,7 +252,7 @@ export default function LockedExamPage() {
       const { error: logErr } = await persistProctoringLog(supabase, {
         examId,
         studentId: user.id,
-        resultId: result.id,
+        takeId: result.id,
         increments: {
           prohibitedObject:
             violationCounts.fullscreen_exit +
@@ -313,7 +354,7 @@ export default function LockedExamPage() {
             {timeString}
           </span>
           <div className="bg-black/30 rounded-[4px] overflow-hidden w-[60px] h-[36px] relative">
-            <ProctorCamera width={60} height={36} examId={examId} />
+            <ProctorCamera width={60} height={36} examId={examId} takeId={takeId || undefined} />
           </div>
         </div>
       </div>

@@ -9,9 +9,10 @@ interface ProctorCameraProps {
   width?: number;
   height?: number;
   examId?: string;
+  takeId?: string;
 }
 
-export default function ProctorCamera({ width = 640, height = 480, examId }: ProctorCameraProps) {
+export default function ProctorCamera({ width = 640, height = 480, examId, takeId }: ProctorCameraProps) {
     const supabase = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -54,7 +55,7 @@ export default function ProctorCamera({ width = 640, height = 480, examId }: Pro
 
     // Handle anomaly capture & background async upload to cheating_logs
     useEffect(() => {
-        if (!anomalyEvent || !examId) return;
+        if (!anomalyEvent || !examId || !takeId) return;
         
         const pushAnomaly = async () => {
             const { data: { user } } = await supabase.auth.getUser();
@@ -63,6 +64,7 @@ export default function ProctorCamera({ width = 640, height = 480, examId }: Pro
             await persistProctoringLog(supabase, {
               examId,
               studentId: user.id,
+              takeId,
               increments: {
                 noFace: anomalyEvent.type === 'eye_off_screen' ? 1 : 0,
                 multipleFace: anomalyEvent.type === 'multiple_persons' ? 1 : 0,
@@ -77,7 +79,7 @@ export default function ProctorCamera({ width = 640, height = 480, examId }: Pro
         };
 
         pushAnomaly();
-    }, [anomalyEvent, examId, supabase]);
+    }, [anomalyEvent, examId, takeId, supabase]);
 
     return (
         <div style={{ width, height }} className="relative overflow-hidden rounded-[14px] bg-ink object-cover">

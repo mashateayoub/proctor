@@ -18,7 +18,7 @@ type CountIncrements = {
 type PersistProctoringLogOptions = {
   examId: string;
   studentId: string;
-  resultId?: string;
+  takeId: string;
   increments?: CountIncrements;
   screenshots?: ProctoringSnapshot[];
 };
@@ -45,39 +45,35 @@ export async function persistProctoringLog(
   {
     examId,
     studentId,
-    resultId,
+    takeId,
     increments = zeroCounts,
     screenshots = [],
   }: PersistProctoringLogOptions,
 ) {
-  const counts = { ...zeroCounts, ...increments };
-
-  let query = supabase
-    .from('cheating_logs')
-    .select('*')
-    .eq('exam_id', examId)
-    .eq('student_id', studentId);
-
-  if (resultId) {
-    query = query.or(`result_id.eq.${resultId},result_id.is.null`);
+  if (!takeId) {
+    const err = new Error('takeId (Take ID) is mandatory for proctoring logs.');
+    console.error('[proctoring]', err);
+    return { error: err };
   }
 
-  const { data: existingRows, error: fetchError } = await query
-    .order('created_at', { ascending: false })
-    .limit(1);
+  const counts = { ...zeroCounts, ...increments };
+
+  // Strict mapping: One take (takeId) has one cheating_log row
+  const { data: existing, error: fetchError } = await supabase
+    .from('cheating_logs')
+    .select('*')
+    .eq('result_id', takeId)
+    .maybeSingle();
 
   if (fetchError) {
     console.error('[proctoring] Failed to read cheating log', fetchError);
     return { error: fetchError };
   }
 
-  const existing = (existingRows?.[0] || null) as ProctoringLogRow | null;
-
   if (existing) {
     const { data, error } = await supabase
       .from('cheating_logs')
       .update({
-        result_id: existing.result_id || resultId || null,
         no_face_count: (existing.no_face_count || 0) + counts.noFace,
         multiple_face_count: (existing.multiple_face_count || 0) + counts.multipleFace,
         cell_phone_count: (existing.cell_phone_count || 0) + counts.cellPhone,
@@ -99,7 +95,7 @@ export async function persistProctoringLog(
   const { data, error } = await supabase
     .from('cheating_logs')
     .insert({
-      result_id: resultId || null,
+      result_id: takeId,
       exam_id: examId,
       student_id: studentId,
       no_face_count: counts.noFace,

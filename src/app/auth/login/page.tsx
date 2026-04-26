@@ -45,16 +45,16 @@ export default function LoginPage() {
       <main className="flex min-h-screen items-center justify-center bg-soft-cloud px-6 py-12 text-ink">
         <motion.div
           {...scaleIn}
-          className="w-full max-w-[420px] rounded-[20px] border border-hairline bg-white p-8 airbnb-card-shadow"
+          className="w-full max-w-[400px] rounded-[16px] border border-hairline bg-white p-6 airbnb-card-shadow"
         >
-          <motion.div {...fadeUp} className="text-center mb-10">
-            <h1 className="text-section-heading mb-2">Sign in</h1>
-            <p className="text-body-standard text-ash">Access your proctoring dashboard.</p>
+          <motion.div {...fadeUp} className="text-center mb-6">
+            <h1 className="text-section-heading mb-1 text-[24px]">Sign in</h1>
+            <p className="text-[14px] text-ash">Access your proctoring dashboard.</p>
           </motion.div>
 
           <motion.form
             onSubmit={handleLogin}
-            className="flex flex-col gap-6"
+            className="flex flex-col gap-4"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.15, ease: [0.25, 0.46, 0.45, 0.94] as const }}
@@ -69,7 +69,7 @@ export default function LoginPage() {
               </motion.p>
             )}
 
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3">
               <motion.input
                 {...fadeIn}
                 transition={{ ...fadeIn.transition, delay: 0.2 }}
@@ -78,7 +78,7 @@ export default function LoginPage() {
                 placeholder="Email ID"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="airbnb-input w-full px-4 py-[14px] text-body-standard transition-colors"
+                className="airbnb-input w-full px-4 py-3 text-[14px] transition-colors h-[42px]"
               />
               <motion.input
                 {...fadeIn}
@@ -88,11 +88,11 @@ export default function LoginPage() {
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="airbnb-input w-full px-4 py-[14px] text-body-standard transition-colors"
+                className="airbnb-input w-full px-4 py-3 text-[14px] transition-colors h-[42px]"
               />
             </div>
 
-            <Button type="submit" variant="primary-blue" disabled={loading} className="w-full mt-2 h-[48px]">
+            <Button type="submit" variant="primary-blue" disabled={loading} className="w-full mt-2 h-[42px]">
               {loading ? 'Authenticating...' : 'Sign In'}
             </Button>
 
