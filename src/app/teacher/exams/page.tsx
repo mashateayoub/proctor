@@ -68,22 +68,22 @@ export default function ExamManagementPage() {
     <div className="w-full">
         <div className="max-w-[1024px] mx-auto">
           
-          <motion.div {...fadeUp} className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
+          <motion.div {...fadeUp} className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
              <div>
-               <h1 className="text-section-heading text-ink mb-2 tracking-tight">Active Assessments.</h1>
-               <p className="text-body-standard text-ash">Manage, review, or permanently delete your constructed exams.</p>
+               <h1 className="text-[28px] font-display font-bold text-[var(--color-ink)] mb-1 tracking-tight">Assessments.</h1>
+               <p className="text-[14px] text-[var(--color-ash)] font-medium">Manage, review, or remove your proctored exams.</p>
              </div>
-             <Button variant="primary-blue" onClick={() => router.push('/teacher/create-exam')}>
-               Create New Exam
+             <Button variant="primary" onClick={() => router.push('/teacher/create-exam')}>
+               New Assessment
              </Button>
           </motion.div>
 
           {loading ? (
-            <motion.p {...fadeIn} className="text-center text-caption text-ash mt-20">Loading registry...</motion.p>
+            <motion.p {...fadeIn} className="text-center text-[13px] text-[var(--color-ash)] font-medium mt-20">Accessing registry...</motion.p>
           ) : exams.length === 0 ? (
-            <motion.div {...scaleIn} className="text-center py-24 bg-white rounded-[8px]">
-              <p className="text-body-standard text-ash mb-4">No exams found under your registry.</p>
-              <Button variant="pill-link" onClick={() => router.push('/teacher/create-exam')}>Create your first assessment</Button>
+            <motion.div {...scaleIn} className="text-center py-20 bg-white rounded-[16px] border border-[var(--color-hairline)] airbnb-card-shadow">
+              <p className="text-[15px] text-[var(--color-ash)] font-medium mb-6">No assessments found in your registry.</p>
+              <Button variant="pill" onClick={() => router.push('/teacher/create-exam')}>Create your first assessment</Button>
             </motion.div>
           ) : (
             <motion.div
@@ -104,43 +104,45 @@ export default function ExamManagementPage() {
                       exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
                       layout
                     >
-                      <Card elevated className="flex flex-col h-full bg-white" delay={0}>
-                        <div className="p-8 flex-grow">
+                      <Card elevated className="flex flex-col h-full bg-white rounded-[16px]" delay={0}>
+                        <div className="p-6 flex-grow">
                           <div className="flex justify-between items-start mb-4">
-                            <span className={`text-[12px] px-2 py-1 rounded-[4px] font-semibold tracking-tight ${isLive ? 'bg-green-100 text-green-800' : 'bg-soft-cloud text-ash'}`}>
-                              {isLive ? 'Active' : 'Scheduled / Ended'}
+                            <span className={`text-[10px] px-2 py-1 rounded-[4px] font-bold uppercase tracking-wider ${isLive ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-[var(--color-soft-cloud)] text-[var(--color-ash)] border border-[var(--color-hairline)]'}`}>
+                              {isLive ? 'Live Now' : 'Off-Session'}
                             </span>
-                            <span className="text-caption font-semibold text-mute">{exam.duration_minutes}m</span>
+                            <span className="text-[11px] font-bold text-[var(--color-mute)] font-mono uppercase">{exam.duration_minutes}m</span>
                           </div>
                           
-                          <h3 className="text-[21px] font-bold text-ink mb-2 leading-tight tracking-tight">
+                          <h3 className="text-[18px] font-display font-bold text-[var(--color-ink)] mb-1 leading-tight tracking-tight">
                             {exam.exam_name}
                           </h3>
-                          <p className="text-caption text-ash mb-6 font-mono text-[11px]">
-                             ID: {exam.id.split('-')[0]}
+                          <p className="text-[10px] text-[var(--color-ash)] mb-6 font-mono font-bold uppercase tracking-widest">
+                             REF: {exam.id.split('-')[0]}
                           </p>
                           
-                          <div className="flex justify-between items-center bg-soft-cloud border border-hairline p-3 rounded-[8px] mb-6">
-                            <span className="text-[11px] font-semibold text-ash uppercase tracking-wider">Access PIN</span>
-                            <span className="text-[16px] font-mono font-bold text-rausch tracking-[4px]">{exam.pin_code || '------'}</span>
+                          <div className="flex justify-between items-center bg-[var(--color-soft-cloud)] border border-[var(--color-hairline)] p-3 rounded-[10px] mb-6">
+                            <span className="text-[10px] font-bold text-[var(--color-ash)] uppercase tracking-wider">PIN</span>
+                            <span className="text-[16px] font-mono font-bold text-[var(--color-rausch)] tracking-[4px]">{exam.pin_code || '------'}</span>
                           </div>
                           
-                          <div className="flex flex-col gap-1 mb-6">
-                            <p className="text-caption text-ash">
-                              <span className="opacity-60">Questions:</span> {exam.total_questions}
-                            </p>
-                            <p className="text-caption text-ash">
-                              <span className="opacity-60">Live:</span> {live.toLocaleDateString()}
-                            </p>
+                          <div className="flex flex-col gap-1.5 mb-2">
+                            <div className="flex justify-between items-center text-[12px]">
+                               <span className="text-[var(--color-ash)] font-medium">MCQs</span>
+                               <span className="text-[var(--color-ink)] font-bold">{exam.total_questions}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-[12px]">
+                               <span className="text-[var(--color-ash)] font-medium">Start Date</span>
+                               <span className="text-[var(--color-ink)] font-bold">{live.toLocaleDateString()}</span>
+                            </div>
                           </div>
                         </div>
                         
-                        <div className="p-8 pt-0 flex justify-between items-center mt-auto border-t border-hairline pt-4">
-                          <Button variant="pill-link" className="text-red-500 border-red-500 hover:bg-red-50" onClick={() => handleDelete(exam.id)}>
+                        <div className="p-4 bg-[var(--color-soft-cloud)]/40 flex justify-between items-center border-t border-[var(--color-hairline)]">
+                          <Button variant="secondary" className="text-[var(--color-error)] border-[var(--color-error)]/20 hover:bg-red-50 px-4" onClick={() => handleDelete(exam.id)}>
                             Delete
                           </Button>
-                          <Button variant="filter" onClick={() => router.push(`/teacher/add-questions?exam=${exam.id}`)}>
-                             Add Content
+                          <Button variant="pill" className="px-4" onClick={() => router.push(`/teacher/add-questions?exam=${exam.id}`)}>
+                             Edit Content
                           </Button>
                         </div>
                       </Card>

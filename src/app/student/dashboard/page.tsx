@@ -72,39 +72,38 @@ export default function StudentDashboard() {
 
   return (
     <div className="w-full">
-      <section className="w-full rounded-[20px] border border-hairline bg-white px-6 py-10 text-center airbnb-card-shadow">
-        <motion.p {...fadeIn} className="mb-3 text-[12px] font-bold tracking-[0.32px] text-rausch">
-          STUDENT GATEWAY
+      <section className="w-full rounded-[16px] border border-[var(--color-hairline)] bg-white px-6 py-12 text-center airbnb-card-shadow">
+        <motion.p {...fadeIn} className="mb-2 text-[11px] font-bold tracking-[0.2em] text-[var(--color-rausch)] uppercase">
+          Student Gateway
         </motion.p>
-        <motion.h1 {...fadeUp} className="text-display-hero text-ink max-w-[800px] mb-4">
-          Access gateway.
+        <motion.h1 {...fadeUp} className="text-[32px] md:text-[40px] font-display font-bold text-[var(--color-ink)] tracking-tight mb-3">
+          Enter assessment.
         </motion.h1>
         <motion.p
           {...fadeUp}
           transition={{ ...fadeUp.transition, delay: 0.1 }}
-          className="text-body-standard text-ash max-w-[600px] mb-10"
+          className="text-[15px] text-[var(--color-ash)] max-w-[550px] mx-auto mb-8 font-medium leading-relaxed"
         >
-          Enter the secure PIN code provided by your instructor to unlock and initialize your proctored assessment.
+          Initialize your secure proctoring session by entering the 6-digit PIN provided by your instructor.
         </motion.p>
         
-        {/* PIN Entry Form */}
         <motion.form
           {...fadeIn}
           transition={{ ...fadeIn.transition, delay: 0.25 }}
           onSubmit={handleUnlock}
-          className="flex flex-col md:flex-row gap-4 items-center justify-center max-w-[500px] w-full"
+          className="flex flex-col md:flex-row gap-3 items-center justify-center max-w-[440px] mx-auto w-full"
         >
            <motion.input
              whileFocus={{ scale: 1.01, borderColor: '#ff385c' }}
-             transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+             transition={{ type: 'spring', stiffness: 400, damping: 30 }}
              type="text" 
-             placeholder="ENTER PIN (e.g. A9F2K1)" 
+             placeholder="PIN CODE" 
              value={pinCode}
              onChange={(e) => setPinCode(e.target.value.toUpperCase())}
              maxLength={6}
-             className="w-full bg-white border border-hairline rounded-[10px] px-6 py-3 text-[16px] font-mono font-bold tracking-[4px] text-center focus:outline-none focus:border-rausch shadow-sm text-ink h-[42px]"
+             className="w-full bg-white border border-[var(--color-hairline)] rounded-[10px] px-4 py-3 text-[18px] font-mono font-bold tracking-[6px] text-center focus:outline-none focus:border-[var(--color-rausch)] shadow-sm text-[var(--color-ink)]"
            />
-           <Button type="submit" variant="primary-blue" disabled={loading} className="px-8 whitespace-nowrap h-[42px]">
+           <Button type="submit" variant="primary" disabled={loading} className="w-full md:w-auto px-8">
              {loading ? 'Verifying...' : 'Unlock'}
            </Button>
         </motion.form>
@@ -114,7 +113,7 @@ export default function StudentDashboard() {
               initial={{ opacity: 0, y: -5 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -5 }}
-              className="text-error font-semibold mt-4 text-[14px]"
+              className="text-[var(--color-error)] font-bold mt-4 text-[13px]"
             >
               {error}
             </motion.p>
@@ -126,70 +125,58 @@ export default function StudentDashboard() {
       <AnimatePresence>
         {unlockedExam && (
           <motion.section
-            initial={{ opacity: 0, y: 40 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 40 }}
-            transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] as const }}
-            className="w-full bg-white py-12 px-6 border-t border-hairline"
+            exit={{ opacity: 0, y: 20 }}
+            className="w-full bg-white py-12 px-6 border-t border-[var(--color-hairline)]"
           >
-            <div className="max-w-[700px] mx-auto">
+            <div className="max-w-[600px] mx-auto">
               <motion.h2
                 {...fadeUp}
-                transition={{ ...fadeUp.transition, delay: 0.15 }}
-                className="text-section-heading text-ink mb-12 text-center"
+                className="text-[24px] font-display font-bold text-[var(--color-ink)] mb-8 text-center"
               >
-                Assessment Unlocked.
+                Assessment Ready.
               </motion.h2>
               
-              <Card elevated className="flex flex-col overflow-hidden bg-soft-cloud" delay={0.2}>
+              <Card elevated className="flex flex-col overflow-hidden bg-[var(--color-soft-cloud)] rounded-[16px]" delay={0.2}>
                 <div className="p-6">
-                  <motion.span {...fadeIn} transition={{ ...fadeIn.transition, delay: 0.3 }} className="text-caption font-semibold text-rausch mb-2 block">{unlockedExam.teacher_name}</motion.span>
-                  <motion.h3 {...fadeUp} transition={{ ...fadeUp.transition, delay: 0.35 }} className="text-card-title text-ink mb-4">{unlockedExam.exam_name}</motion.h3>
-                  <motion.div
-                    {...fadeIn}
-                    transition={{ ...fadeIn.transition, delay: 0.4 }}
-                    className="flex flex-col gap-2 mb-6"
-                  >
-                    <p className="text-body-standard text-ash font-mono text-[12px]">
-                      <span className="opacity-50">DURATION: </span>{unlockedExam.duration_minutes} Minutes
-                    </p>
-                    <p className="text-body-standard text-ash font-mono text-[12px]">
-                      <span className="opacity-50">QUESTIONS: </span>{unlockedExam.total_questions}
-                    </p>
-                    <p className="text-body-standard text-ash font-mono text-[12px]">
-                      <span className="opacity-50">DEADLINE: </span>{new Date(unlockedExam.dead_date).toLocaleString()}
-                    </p>
-                  </motion.div>
+                  <span className="text-[11px] font-bold text-[var(--color-rausch)] uppercase tracking-wider mb-1 block">{unlockedExam.teacher_name}</span>
+                  <h3 className="text-[20px] font-display font-bold text-[var(--color-ink)] mb-4">{unlockedExam.exam_name}</h3>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-bold text-[var(--color-mute)] uppercase">Duration</span>
+                      <span className="text-[14px] font-bold text-[var(--color-ink)]">{unlockedExam.duration_minutes}m</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-bold text-[var(--color-mute)] uppercase">Questions</span>
+                      <span className="text-[14px] font-bold text-[var(--color-ink)]">{unlockedExam.total_questions}</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-bold text-[var(--color-mute)] uppercase">Deadline</span>
+                      <span className="text-[14px] font-bold text-[var(--color-ink)]">{new Date(unlockedExam.dead_date).toLocaleDateString()}</span>
+                    </div>
+                  </div>
                 </div>
-                <motion.div
-                  {...fadeIn}
-                  transition={{ ...fadeIn.transition, delay: 0.5 }}
-                  className="p-6 bg-soft-cloud flex flex-col items-center border-t border-hairline"
-                >
+                <div className="p-6 bg-[var(--color-hairline)]/20 flex flex-col items-center border-t border-[var(--color-hairline)]">
                    {isExamMissed(unlockedExam.dead_date) ? (
                       <div className="w-full text-center">
-                         <Button variant="filter" disabled className="w-full opacity-50 cursor-not-allowed text-ash">
-                            Deadline Passed
-                         </Button>
-                         <p className="text-[12px] text-error font-semibold mt-4">You can no longer start this exam.</p>
+                         <Button variant="pill" disabled className="w-full opacity-50">Deadline Passed</Button>
                       </div>
                    ) : !isExamLive(unlockedExam.live_date, unlockedExam.dead_date) ? (
                       <div className="w-full text-center">
-                         <Button variant="filter" disabled className="w-full opacity-50 cursor-not-allowed text-ash">
-                            Not Live Yet
-                         </Button>
-                         <p className="text-[12px] text-ash mt-4 font-semibold">Opens: {new Date(unlockedExam.live_date).toLocaleString()}</p>
+                         <Button variant="pill" disabled className="w-full opacity-50">Not Live Yet</Button>
+                         <p className="text-[11px] text-[var(--color-ash)] mt-2 font-bold">Opens: {new Date(unlockedExam.live_date).toLocaleString()}</p>
                       </div>
                    ) : (
                       <Button 
-                        variant="primary-blue" 
+                        variant="primary" 
                         onClick={() => router.push(`/student/test/${unlockedExam.id}`)}
-                        className="w-full max-w-[300px] h-[42px] text-[15px]"
+                        className="w-full max-w-[280px]"
                       >
-                        Initialize Secure Session
+                        Start Assessment
                       </Button>
                    )}
-                </motion.div>
+                </div>
               </Card>
             </div>
           </motion.section>
@@ -197,20 +184,19 @@ export default function StudentDashboard() {
       </AnimatePresence>
 
       {/* Proctoring Pre-Warm */}
-      <section className="w-full bg-soft-cloud py-12 px-6 border-t border-hairline">
-        <div className="max-w-[980px] mx-auto">
+      <section className="w-full bg-[var(--color-soft-cloud)] py-12 px-6 border-t border-[var(--color-hairline)]">
+        <div className="max-w-[800px] mx-auto text-center">
           <motion.h2
             {...fadeUp}
-            className="text-section-heading text-ink mb-12 text-center"
+            className="text-[20px] font-display font-bold text-[var(--color-ink)] mb-8"
           >
-            System Check.
+            Camera verification.
           </motion.h2>
           <motion.div
             {...scaleIn}
-            transition={{ ...scaleIn.transition, delay: 0.15 }}
             className="flex justify-center"
           >
-            <div className="w-full max-w-[640px] overflow-hidden rounded-[20px] border border-hairline bg-white p-4 airbnb-card-shadow">
+            <div className="w-full max-w-[500px] overflow-hidden rounded-[16px] border border-[var(--color-hairline)] bg-white p-2 airbnb-card-shadow">
               <ProctorCamera />
             </div>
           </motion.div>

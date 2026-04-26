@@ -2,9 +2,8 @@
 
 import React from 'react';
 import { motion, type HTMLMotionProps } from 'framer-motion';
-import { tapSpring } from '@/lib/motion';
 
-type ButtonVariant = 'primary-blue' | 'primary-dark' | 'pill-link' | 'filter' | 'media-control';
+type ButtonVariant = 'primary' | 'secondary' | 'pill' | 'tab' | 'icon';
 
 interface ButtonProps extends Omit<HTMLMotionProps<'button'>, 'children'> {
   variant?: ButtonVariant;
@@ -35,9 +34,9 @@ export function Button({ variant = 'primary-blue', children, className = '', ...
   return (
     <motion.button
       className={`${baseStyles} ${className}`}
-      whileTap={props.disabled ? undefined : tapSpring.whileTap}
-      whileHover={props.disabled ? undefined : tapSpring.whileHover}
-      transition={tapSpring.transition}
+      whileTap={{ scale: 0.94 }}
+      whileHover={{ scale: 1.02 }}
+      transition={{ type: "spring", stiffness: 400, damping: 25 }}
       {...props}
     >
       {children}

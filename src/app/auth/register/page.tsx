@@ -47,38 +47,38 @@ export default function RegisterPage() {
     }
   };
 
-  const inputClass = "airbnb-input w-full px-4 py-3 text-[14px] transition-colors h-[42px]";
+  const inputClass = "airbnb-input w-full px-4 py-2.5 text-[14px] font-medium transition-all";
 
   return (
     <>
-      <main className="flex min-h-screen items-center justify-center bg-soft-cloud px-6 py-12 text-ink">
-        <motion.div {...scaleIn} className="w-full max-w-[400px] rounded-[16px] border border-hairline bg-white p-6 airbnb-card-shadow">
+      <main className="flex min-h-screen items-center justify-center bg-[var(--color-soft-cloud)] px-6 py-12 text-[var(--color-ink)]">
+        <motion.div {...scaleIn} className="w-full max-w-[400px] rounded-[16px] border border-[var(--color-hairline)] bg-white p-6 airbnb-card-shadow">
           <motion.div {...fadeUp} className="text-center mb-6">
-            <h1 className="text-section-heading mb-1 text-[24px]">Create account</h1>
-            <p className="text-[14px] text-ash">Get started with AiProctor today.</p>
+            <h1 className="text-[24px] font-display font-bold text-[var(--color-ink)] tracking-tight mb-1">Create account</h1>
+            <p className="text-[14px] text-[var(--color-ash)] font-medium">Get started with AiProctor today.</p>
           </motion.div>
 
           <motion.form
             onSubmit={handleRegister}
             className="flex flex-col gap-4"
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.15, ease: [0.25, 0.46, 0.45, 0.94] as const }}
+            transition={{ duration: 0.4, delay: 0.15, ease: [0.25, 0.46, 0.45, 0.94] as const }}
           >
-            <AnimatePresence>
+            <AnimatePresence mode="wait">
               {error && (
                 <motion.p
-                  initial={{ opacity: 0, x: -10 }}
+                  initial={{ opacity: 0, x: -5 }}
                   animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -10 }}
-                  className="text-center text-error text-caption"
+                  exit={{ opacity: 0, x: -5 }}
+                  className="text-center text-[var(--color-error)] text-[12px] font-bold"
                 >
                   {error}
                 </motion.p>
               )}
             </AnimatePresence>
 
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3">
               <motion.input
                 {...fadeIn}
                 transition={{ ...fadeIn.transition, delay: 0.15 }}
@@ -117,32 +117,31 @@ export default function RegisterPage() {
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
-                  className="airbnb-input w-full cursor-pointer appearance-none px-4 py-3 text-[14px] h-[42px]"
+                  className="airbnb-input w-full cursor-pointer appearance-none px-4 py-2.5 text-[14px] font-medium"
                 >
                   <option value="student">I am a Student</option>
                   <option value="teacher">I am a Teacher</option>
                 </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-ash">
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-[var(--color-ash)] text-[10px]">
                   ▼
                 </div>
               </motion.div>
             </div>
 
-            <Button type="submit" variant="primary-blue" disabled={loading} className="w-full mt-2 h-[42px]">
+            <Button type="submit" variant="primary" disabled={loading} className="w-full mt-2">
               {loading ? 'Creating...' : 'Register'}
             </Button>
 
             <motion.div
               {...fadeIn}
               transition={{ ...fadeIn.transition, delay: 0.4 }}
-              className="text-center mt-2 border-t border-hairline pt-6"
+              className="text-center mt-2 border-t border-[var(--color-hairline)] pt-4"
             >
-              <p className="text-caption text-ash">
+              <p className="text-[13px] text-[var(--color-ash)] font-medium">
                 Already registered?{' '}
-                <Link href="/auth/login" className="font-semibold text-ink underline-offset-4 hover:underline">
+                <Link href="/auth/login" className="font-bold text-[var(--color-rausch)] hover:underline underline-offset-4">
                   Sign in
                 </Link>
-                .
               </p>
             </motion.div>
           </motion.form>

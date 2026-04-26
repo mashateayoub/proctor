@@ -35,8 +35,8 @@ export default function ExamInstructionsPage() {
     if (examId) fetchExam();
   }, [examId, supabase]);
 
-  if (loading) return <div className="min-h-screen bg-soft-cloud pt-32 text-center text-ink">Authenticating schema...</div>;
-  if (!exam) return <div className="min-h-screen bg-soft-cloud pt-32 text-center text-ink">Exam not found.</div>;
+  if (loading) return <div className="min-h-screen bg-[var(--color-soft-cloud)] pt-32 text-center text-[var(--color-ink)] font-medium">Initializing secure layer...</div>;
+  if (!exam) return <div className="min-h-screen bg-[var(--color-soft-cloud)] pt-32 text-center text-[var(--color-ink)] font-medium">Assessment not found.</div>;
 
   return (
     <>
@@ -45,34 +45,34 @@ export default function ExamInstructionsPage() {
         links={[{label: 'Dashboard', href: '/student/dashboard'}]} 
       />
 
-      <main className="bg-soft-cloud min-h-screen pt-20 pb-12 px-6">
+      <main className="bg-[var(--color-soft-cloud)] min-h-screen pt-24 pb-12 px-6">
         <div className="max-w-[800px] mx-auto">
           
-          <div className="mb-8 text-center">
-             <h1 className="text-display-hero text-ink mb-4 tracking-tight leading-none text-[32px]">
+          <div className="mb-6 text-center">
+             <h1 className="text-display-hero text-[var(--color-ink)] mb-3">
                {exam.exam_name}
              </h1>
-             <p className="text-body-standard text-ash">
-               Please review the testing protocol below before initializing the proctoring engine.
+             <p className="text-[15px] text-[var(--color-ash)] font-medium max-w-[600px] mx-auto">
+               Review the testing protocol below before initializing the proctoring engine.
              </p>
           </div>
 
-          <Card elevated className="bg-white p-6 mb-8">
-             <div className="flex flex-col gap-6 text-body-standard text-ink">
-                <div className="grid grid-cols-2 gap-4 pb-6 border-b border-hairline">
+          <Card elevated className="bg-white p-6 mb-8 rounded-[16px]">
+             <div className="flex flex-col gap-6 text-[14px] text-[var(--color-ink)] font-medium">
+                <div className="grid grid-cols-2 gap-4 pb-6 border-b border-[var(--color-hairline)]">
                    <div>
-                     <span className="text-caption text-ash block mb-1">Time Limit</span>
-                     <span className="font-semibold text-[21px]">{exam.duration_minutes} Minutes</span>
+                     <span className="text-[11px] font-bold text-[var(--color-ash)] uppercase tracking-wider block mb-1">Time Limit</span>
+                     <span className="font-display font-bold text-[20px]">{exam.duration_minutes} Minutes</span>
                    </div>
                    <div>
-                     <span className="text-caption text-ash block mb-1">Total Questions</span>
-                     <span className="font-semibold text-[21px]">{exam.total_questions} MCQs + 1 Coding</span>
+                     <span className="text-[11px] font-bold text-[var(--color-ash)] uppercase tracking-wider block mb-1">Total Questions</span>
+                     <span className="font-display font-bold text-[20px]">{exam.total_questions} MCQs + 1 Coding</span>
                    </div>
                 </div>
 
                 <div>
-                  <h3 className="text-card-title mb-4">Academic Integrity Rules</h3>
-                  <ul className="list-disc pl-5 flex flex-col gap-3 text-ash">
+                  <h3 className="text-[18px] font-display font-bold mb-4 tracking-tight">Academic Integrity Protocol</h3>
+                  <ul className="list-disc pl-5 flex flex-col gap-3 text-[var(--color-ash)]">
                      <li>You must remain in the camera frame for the entire duration of the assessment.</li>
                      <li>Multiple persons detected in the frame will instantly flag the session.</li>
                      <li>Use of cellular devices or prohibited electronics is strictly forbidden and actively tracked.</li>
@@ -85,21 +85,21 @@ export default function ExamInstructionsPage() {
           </Card>
 
           <div className="flex flex-col items-center gap-6">
-             <label className="flex items-center gap-3 cursor-pointer">
+             <label className="flex items-center gap-3 cursor-pointer group">
                 <input 
                   type="checkbox" 
-                  className="w-5 h-5 rounded-[4px] border-hairline accent-[#ff385c]"
+                  className="w-4 h-4 rounded-[4px] border-[var(--color-hairline)] accent-[var(--color-rausch)]"
                   checked={certified}
                   onChange={(e) => setCertified(e.target.checked)}
                 />
-                <span className="text-caption text-ash select-none">
+                <span className="text-[13px] text-[var(--color-ash)] select-none font-medium group-hover:text-[var(--color-ink)] transition-colors">
                   I certify I have read the protocol and agree to active webcam proctoring.
                 </span>
              </label>
 
              <Button 
-               variant="primary-blue" 
-               className="w-full max-w-[300px] h-[42px] text-[15px]" 
+               variant="primary" 
+               className="w-full max-w-[280px]" 
                disabled={!certified}
                onClick={() => router.push(`/exam/${examId}`)}
              >

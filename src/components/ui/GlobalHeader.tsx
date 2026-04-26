@@ -23,14 +23,14 @@ export function GlobalHeader() {
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: 'easeOut', delay: 0.15 }}
-      className="h-20 flex-shrink-0 border-b border-hairline bg-white px-5 sm:px-8 flex items-center justify-between"
+      className="h-20 flex-shrink-0 border-b border-[var(--color-hairline)] bg-white px-5 sm:px-8 flex items-center justify-between"
     >
-       <motion.div {...fadeIn} className="flex items-center gap-3 text-[14px] font-medium text-ash">
-          <span className="h-8 w-8 rounded-full bg-soft-cloud border border-hairline flex items-center justify-center text-rausch">●</span>
+       <motion.div {...fadeIn} className="flex items-center gap-3 text-[13px] font-semibold text-[var(--color-ash)] uppercase tracking-wide">
+          <span className="h-6 w-6 rounded-full bg-[var(--color-soft-cloud)] border border-[var(--color-hairline)] flex items-center justify-center text-[var(--color-rausch)] text-[10px]">●</span>
           Proctoring session isolated
        </motion.div>
        <div>
-          <Button variant="pill-link" onClick={handleLogout} className="min-h-9 px-4 py-1 text-[12px]">Sign Out</Button>
+          <Button variant="pill" onClick={handleLogout} className="h-9 px-4 text-[12px]">Sign Out</Button>
        </div>
     </motion.header>
   );
