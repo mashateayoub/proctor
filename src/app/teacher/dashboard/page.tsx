@@ -25,7 +25,7 @@ export default function TeacherDashboard() {
             transition={{ ...fadeUp.transition, delay: 0.12 }}
             className="text-[15px] text-[var(--color-ash)] max-w-[550px] mx-auto mb-8 font-medium leading-relaxed"
           >
-            Manage assessments and review live anomalies. Your central command for maintaining academic standards.
+            Manage assessments, grade submissions, and inspect proctoring anomalies in one teacher command center.
           </motion.p>
           <motion.div
             {...fadeIn}
@@ -33,7 +33,7 @@ export default function TeacherDashboard() {
             className="flex flex-col justify-center gap-3 sm:flex-row"
           >
             <Button variant="primary" onClick={() => router.push('/teacher/create-exam')}>Create new exam</Button>
-            <Button variant="pill" onClick={() => router.push('/teacher/analytics')}>View analytics</Button>
+            <Button variant="pill" onClick={() => router.push('/teacher/results')}>Open results & integrity</Button>
           </motion.div>
         </section>
     </div>

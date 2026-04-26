@@ -225,7 +225,7 @@ export default function ActiveExamPage() {
                       <button 
                         key={idx}
                         onClick={() => handleSelectOption(questions[currentIdx].id, idx)}
-                        className={`text-left p-4 rounded-[8px] border transition-colors ${isSelected ? 'bg-rausch border-rausch text-white' : 'border-hairline hover:border-ink'}`}
+                        className={`text-left rounded-[8px] border px-3 py-2.5 text-[13px] transition-colors ${isSelected ? 'bg-rausch border-rausch text-white' : 'border-hairline hover:border-ink'}`}
                       >
                          {opt.optionText}
                       </button>
@@ -238,17 +238,16 @@ export default function ActiveExamPage() {
                     variant="filter" 
                     onClick={() => setCurrentIdx(prev => prev > 0 ? prev - 1 : 0)}
                     disabled={currentIdx === 0}
-                    className="h-[42px]"
                   >
                      Previous
                   </Button>
  
                   {currentIdx === questions.length - 1 ? (
-                    <Button variant="primary-blue" className="h-[42px]" onClick={() => codingQuestion ? setPhase('coding') : handleSubmit()}>
+                    <Button variant="primary-blue" onClick={() => codingQuestion ? setPhase('coding') : handleSubmit()}>
                        {codingQuestion ? 'Proceed to Coding Phase' : '✓ Submit Exam'}
                     </Button>
                   ) : (
-                    <Button variant="primary-blue" className="h-[42px]" onClick={() => setCurrentIdx(prev => prev + 1)}>
+                    <Button variant="primary-blue" onClick={() => setCurrentIdx(prev => prev + 1)}>
                        Next
                     </Button>
                   )}
@@ -278,8 +277,8 @@ export default function ActiveExamPage() {
                      <option value="java">Java (OpenJDK)</option>
                   </select>
                   <div className="flex gap-2">
-                     <Button variant="pill-link" className="text-white border-white border text-[12px] h-[32px] px-3" onClick={handleRunCode}>Run Code</Button>
-                     <Button variant="primary-blue" className="h-[32px] px-4 text-[12px]" onClick={handleSubmit}>Submit Test</Button>
+                     <Button variant="pill-link" size="xs" className="text-white border-white border" onClick={handleRunCode}>Run Code</Button>
+                     <Button variant="primary-blue" size="xs" onClick={handleSubmit}>Submit Test</Button>
                   </div>
                </div>
                

@@ -27,8 +27,8 @@ export function CTASection() {
             Join 1,200+ institutions using AiProctor to deliver high-stakes exams with absolute confidence.
           </p>
           <div className="flex flex-col sm:flex-row items-center gap-4 pt-4">
-            <Button variant="primary" className="w-full sm:w-auto px-10">Create Free Account</Button>
-            <Button className="w-full sm:w-auto px-10 bg-white/10 text-white hover:bg-white/20 border-white/10">Contact Sales</Button>
+            <Button variant="primary" size="md" className="w-full sm:w-auto px-7">Create Free Account</Button>
+            <Button variant="ghost" size="md" className="w-full sm:w-auto px-7 bg-white/10 text-white hover:bg-white/20 border-white/10">Contact Sales</Button>
           </div>
         </div>
         </motion.div>

@@ -333,7 +333,7 @@ export default function LockedExamPage() {
             </p>
             <button
               onClick={requestFullscreen}
-              className="bg-white text-black px-8 py-3 rounded-[8px] font-semibold text-[15px] hover:bg-white/90 transition-colors"
+              className="inline-flex h-9 items-center rounded-[8px] bg-white px-5 text-[13px] font-semibold text-black transition-colors hover:bg-white/90"
             >
               Re-enter Fullscreen
             </button>
@@ -401,7 +401,7 @@ export default function LockedExamPage() {
                   <button
                     key={idx}
                     onClick={() => handleSelectOption(questions[currentIdx].id, idx)}
-                    className={`text-left p-4 rounded-[8px] border transition-all ${
+                    className={`text-left rounded-[8px] border px-3 py-2.5 text-[13px] transition-all ${
                       isSelected
                         ? 'bg-blue-600/20 border-blue-500 text-white ring-1 ring-blue-500/50'
                         : 'border-white/10 hover:border-white/30 text-white/80 hover:text-white hover:bg-white/5'
@@ -421,6 +421,7 @@ export default function LockedExamPage() {
                 variant="filter"
                 onClick={() => setCurrentIdx(prev => (prev > 0 ? prev - 1 : 0))}
                 disabled={currentIdx === 0}
+                size="sm"
                 className="dark:bg-white/5"
               >
                 ← Previous
@@ -470,13 +471,13 @@ export default function LockedExamPage() {
               <div className="flex gap-2">
                 <button
                   onClick={handleRunCode}
-                  className="bg-white/10 hover:bg-white/15 text-white text-[12px] px-3 py-1.5 rounded font-mono transition-colors"
+                  className="inline-flex h-8 items-center rounded bg-white/10 px-3 text-[11px] font-mono text-white transition-colors hover:bg-white/15"
                 >
                   ▶ Run
                 </button>
                 <button
                   onClick={handleSubmit}
-                  className="bg-blue-600 hover:bg-blue-500 text-white text-[12px] px-4 py-1.5 rounded font-semibold transition-colors"
+                  className="inline-flex h-8 items-center rounded bg-blue-600 px-3.5 text-[11px] font-semibold text-white transition-colors hover:bg-blue-500"
                 >
                   Submit Exam
                 </button>

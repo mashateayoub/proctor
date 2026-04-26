@@ -5,8 +5,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
   const links = [
     { label: 'Overview', href: '/teacher/dashboard' },
     { label: 'Exams', href: '/teacher/exams' },
-    { label: 'Analytics', href: '/teacher/analytics' },
-    { label: 'Results', href: '/teacher/results' },
+    { label: 'Results & Integrity', href: '/teacher/results' },
   ];
 
   return (

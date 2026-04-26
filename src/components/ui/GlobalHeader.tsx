@@ -30,7 +30,7 @@ export function GlobalHeader() {
           Proctoring session isolated
        </motion.div>
        <div>
-          <Button variant="pill" onClick={handleLogout} className="h-9 px-4 text-[12px]">Sign Out</Button>
+          <Button variant="pill" size="xs" onClick={handleLogout}>Sign Out</Button>
        </div>
     </motion.header>
   );
