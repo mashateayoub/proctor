@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
 import { Button } from '@/components/ui/Button';
@@ -16,9 +16,13 @@ export default function LockedExamPage() {
   const params = useParams();
   const examId = params.id as string;
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  const supabase = useMemo(
+    () =>
+      createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      ),
+    [],
   );
 
   const [exam, setExam] = useState<any>(null);
@@ -41,6 +45,7 @@ export default function LockedExamPage() {
   // ── Browser violations stored in memory to batch-push at submit ──
   const [browserViolations, setBrowserViolations] = useState<LockdownViolation[]>([]);
   const [takeId, setTakeId] = useState<string | null>(null);
+  const initTakeStartedRef = useRef(false);
 
   const handleViolation = useCallback((v: LockdownViolation) => {
     setBrowserViolations(prev => [...prev, v]);
@@ -55,6 +60,9 @@ export default function LockedExamPage() {
 
   // ── Fetch Exam Data ──
   useEffect(() => {
+    if (!examId || initTakeStartedRef.current) return;
+    initTakeStartedRef.current = true;
+
     const fetchData = async () => {
       const { data: eData } = await supabase.from('exams').select('*').eq('id', examId).single();
       if (eData) {
@@ -66,48 +74,68 @@ export default function LockedExamPage() {
       const { data: cData } = await supabase.from('coding_questions').select('*').eq('exam_id', examId);
       if (cData && cData.length > 0) setCodingQuestion(cData[0]);
     };
-    if (examId) {
-      fetchData();
-      
-      // ── Initialize or Resume "Exam Take" ──
-      const initTake = async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+    fetchData();
 
-        // Check for active take
-        const { data: activeTake } = await supabase
-          .from('results')
-          .select('id')
-          .eq('exam_id', examId)
-          .eq('student_id', user.id)
-          .eq('status', 'in_progress')
-          .maybeSingle();
+    // ── Initialize or Resume "Exam Take" (idempotent) ──
+    const initTake = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-        if (activeTake) {
-          setTakeId(activeTake.id);
-        } else {
-          // Create new take
-          const { data: newTake, error: takeErr } = await supabase
-            .from('results')
-            .insert({
-              exam_id: examId,
-              student_id: user.id,
-              status: 'in_progress',
-              mcq_score: 0,
-              show_to_student: false
-            })
-            .select('id')
-            .single();
-          
-          if (takeErr) {
-            console.error('Failed to initialize exam take:', takeErr);
-          } else if (newTake) {
-            setTakeId(newTake.id);
-          }
-        }
-      };
-      initTake();
-    }
+      const { data: activeTakes, error: activeTakeErr } = await supabase
+        .from('results')
+        .select('id, started_at, created_at')
+        .eq('exam_id', examId)
+        .eq('student_id', user.id)
+        .eq('status', 'in_progress')
+        .order('started_at', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (activeTakeErr) {
+        console.error('Failed to query active take', activeTakeErr);
+        return;
+      }
+
+      const existingTake = activeTakes?.[0];
+      if (existingTake) {
+        setTakeId(existingTake.id);
+        return;
+      }
+
+      const { data: newTake, error: takeErr } = await supabase
+        .from('results')
+        .insert({
+          exam_id: examId,
+          student_id: user.id,
+          status: 'in_progress',
+          mcq_score: 0,
+          show_to_student: false,
+        })
+        .select('id')
+        .single();
+
+      if (!takeErr && newTake) {
+        setTakeId(newTake.id);
+        return;
+      }
+
+      // Unique-index race fallback: fetch active row after failed insert.
+      const { data: raceTake } = await supabase
+        .from('results')
+        .select('id')
+        .eq('exam_id', examId)
+        .eq('student_id', user.id)
+        .eq('status', 'in_progress')
+        .order('started_at', { ascending: false })
+        .limit(1);
+
+      if (raceTake?.[0]?.id) {
+        setTakeId(raceTake[0].id);
+      } else if (takeErr) {
+        console.error('Failed to initialize exam take:', takeErr);
+      }
+    };
+    initTake();
   }, [examId, supabase]);
 
   // ── Timer ──

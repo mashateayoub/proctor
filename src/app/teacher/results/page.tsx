@@ -10,6 +10,7 @@ import { TableToolbar } from '@/components/ui/TableToolbar';
 import { TableSearchInput } from '@/components/ui/TableSearchInput';
 import { TableFilterChips } from '@/components/ui/TableFilterChips';
 import { useTableFilters } from '@/hooks/useTableFilters';
+import { PROCTORING_SNAPSHOTS_BUCKET } from '@/lib/proctoringLogs';
 import { fadeUp, scaleIn, overlayVariants, modalVariants, tableRowVariant, staggerContainer, staggerItem } from '@/lib/motion';
 
 type TakeStatus = 'in_progress' | 'completed';
@@ -63,6 +64,9 @@ interface Screenshot {
   url: string;
   type: string;
   detectedAt: string;
+  storagePath?: string;
+  storageUrl?: string;
+  storageMethod?: 'base64' | 'file+base64';
 }
 
 type SnapTab = 'camera' | 'browser';
@@ -156,6 +160,7 @@ export default function ResultsPage() {
   const [selectedCode, setSelectedCode] = useState<SelectedCodeState | null>(null);
   const [selectedScreenshots, setSelectedScreenshots] = useState<Screenshot[] | null>(null);
   const [activeSnapTab, setActiveSnapTab] = useState<SnapTab>('camera');
+  const [signedSnapshotUrls, setSignedSnapshotUrls] = useState<Record<string, string>>({});
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | TakeStatus>('all');
   const [visibilityFilter, setVisibilityFilter] = useState<'all' | 'published' | 'hidden'>('all');
@@ -249,6 +254,59 @@ export default function ResultsPage() {
       },
     },
   });
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const resolveSignedUrls = async () => {
+      if (!selectedScreenshots || selectedScreenshots.length === 0) {
+        setSignedSnapshotUrls({});
+        return;
+      }
+
+      const storagePaths = Array.from(
+        new Set(
+          selectedScreenshots
+            .map((snapshot) => snapshot.storagePath)
+            .filter((path): path is string => Boolean(path)),
+        ),
+      );
+
+      if (storagePaths.length === 0) {
+        setSignedSnapshotUrls({});
+        return;
+      }
+
+      const urlMap: Record<string, string> = {};
+      await Promise.all(
+        storagePaths.map(async (path) => {
+          const { data, error } = await supabase.storage
+            .from(PROCTORING_SNAPSHOTS_BUCKET)
+            .createSignedUrl(path, 60 * 60);
+          if (!error && data?.signedUrl) {
+            urlMap[path] = data.signedUrl;
+          }
+        }),
+      );
+
+      if (!cancelled) {
+        setSignedSnapshotUrls(urlMap);
+      }
+    };
+
+    resolveSignedUrls();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedScreenshots, supabase]);
+
+  const resolveSnapshotImageUrl = (snapshot: Screenshot) => {
+    if (snapshot.storagePath && signedSnapshotUrls[snapshot.storagePath]) {
+      return signedSnapshotUrls[snapshot.storagePath];
+    }
+    return snapshot.url;
+  };
 
   return (
     <>
@@ -637,7 +695,7 @@ export default function ResultsPage() {
                           {cameraSnaps.map((snap, i) => (
                             <motion.div key={`camera-${i}`} variants={staggerItem} className="flex flex-col gap-2">
                               <div className="relative aspect-video overflow-hidden rounded-[8px] bg-black/10 object-cover">
-                                <img src={snap.url} alt={`Camera violation: ${snap.type}`} className="h-full w-full object-cover" />
+                                <img src={resolveSnapshotImageUrl(snap)} alt={`Camera violation: ${snap.type}`} className="h-full w-full object-cover" />
                               </div>
                               <div className="flex items-center justify-between px-1">
                                 <span className="text-[12px] font-semibold uppercase tracking-wider text-red-500">{formatEventType(snap.type)}</span>
