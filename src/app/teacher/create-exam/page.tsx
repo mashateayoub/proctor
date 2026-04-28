@@ -1,15 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { FeedbackBanner } from '@/components/ui/FeedbackBanner';
 import { useToast } from '@/components/ui/ToastProvider';
-import { fadeUp, fadeIn, scaleIn, staggerContainer, staggerItem } from '@/lib/motion';
+import { fadeUp, fadeIn } from '@/lib/motion';
 import { normalizeErrorMessage } from '@/lib/errors';
+
+type StepId = 'details' | 'coding' | 'tests' | 'review';
 
 interface TestCase {
   label: string;
@@ -17,14 +19,42 @@ interface TestCase {
   expectedOutput: string;
 }
 
+const steps: { id: StepId; label: string }[] = [
+  { id: 'details', label: 'Exam Details' },
+  { id: 'coding', label: 'Coding Challenge' },
+  { id: 'tests', label: 'Test Cases' },
+  { id: 'review', label: 'Review & Publish' },
+];
+
+function getScheduleStatus(liveDate: string, deadDate: string) {
+  if (!liveDate || !deadDate) return { tone: 'neutral', label: 'Incomplete schedule' };
+  const live = new Date(liveDate);
+  const dead = new Date(deadDate);
+  if (Number.isNaN(live.getTime()) || Number.isNaN(dead.getTime()) || dead <= live) {
+    return { tone: 'error', label: 'Invalid schedule' };
+  }
+  const now = new Date();
+  if (now < live) return { tone: 'upcoming', label: 'Upcoming' };
+  if (now > dead) return { tone: 'ended', label: 'Ended' };
+  return { tone: 'live', label: 'Live window' };
+}
+
+function formatDateTime(value: string) {
+  if (!value) return 'Not set';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Not set';
+  return date.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
 export default function CreateExamPage() {
   const router = useRouter();
   const { showToast } = useToast();
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   );
 
+  const [currentStep, setCurrentStep] = useState<StepId>('details');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,317 +63,534 @@ export default function CreateExamPage() {
     duration_minutes: 60,
     total_questions: 10,
     live_date: '',
-    dead_date: ''
+    dead_date: '',
   });
 
   const [codingQuestion, setCodingQuestion] = useState({
     question_text: '',
-    description: ''
+    description: '',
   });
 
-  // ── Test Cases State ──
   const [testCases, setTestCases] = useState<TestCase[]>([]);
 
+  const stepIndex = steps.findIndex((step) => step.id === currentStep);
+  const scheduleStatus = getScheduleStatus(examData.live_date, examData.dead_date);
+  const codingEnabled = Boolean(codingQuestion.question_text.trim());
+  const completedCaseCount = testCases.filter(
+    (tc) => tc.input.trim() && tc.expectedOutput.trim(),
+  ).length;
+
+  const reviewChecks = useMemo(() => {
+    const checks = [];
+    checks.push({ ok: Boolean(examData.exam_name.trim()), label: 'Exam title provided' });
+    checks.push({ ok: examData.duration_minutes > 0, label: 'Duration is valid' });
+    checks.push({ ok: examData.total_questions >= 0, label: 'MCQ target is valid' });
+    checks.push({ ok: scheduleStatus.tone !== 'error' && scheduleStatus.tone !== 'neutral', label: 'Schedule is valid' });
+    return checks;
+  }, [examData, scheduleStatus.tone]);
+
   const addTestCase = () => {
-    setTestCases([...testCases, { label: '', input: '', expectedOutput: '' }]);
+    setTestCases((prev) => [...prev, { label: '', input: '', expectedOutput: '' }]);
   };
 
   const removeTestCase = (idx: number) => {
-    setTestCases(testCases.filter((_, i) => i !== idx));
+    setTestCases((prev) => prev.filter((_, i) => i !== idx));
   };
 
   const updateTestCase = (idx: number, field: keyof TestCase, value: string) => {
-    setTestCases(testCases.map((tc, i) => i === idx ? { ...tc, [field]: value } : tc));
+    setTestCases((prev) => prev.map((tc, i) => (i === idx ? { ...tc, [field]: value } : tc)));
   };
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const validateDetailsStep = () => {
+    if (!examData.exam_name.trim()) return 'Course or assessment name is required.';
+    if (examData.duration_minutes <= 0) return 'Duration must be greater than 0.';
+    if (examData.total_questions < 0) return 'Total MCQ count cannot be negative.';
+    if (!examData.live_date || !examData.dead_date) return 'Live and dead dates are required.';
+
+    const live = new Date(examData.live_date);
+    const dead = new Date(examData.dead_date);
+    if (Number.isNaN(live.getTime()) || Number.isNaN(dead.getTime())) return 'Please provide valid dates.';
+    if (dead <= live) return 'Dead date must be after live date.';
+    return null;
+  };
+
+  const validateStep = (step: StepId) => {
+    if (step === 'details') return validateDetailsStep();
+    return null;
+  };
+
+  const goNextStep = () => {
+    const validationError = validateStep(currentStep);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+    setError(null);
+    if (stepIndex < steps.length - 1) {
+      setCurrentStep(steps[stepIndex + 1].id);
+    }
+  };
+
+  const goPrevStep = () => {
+    setError(null);
+    if (stepIndex > 0) {
+      setCurrentStep(steps[stepIndex - 1].id);
+    }
+  };
+
+  const goToStep = (target: StepId) => {
+    const targetIndex = steps.findIndex((step) => step.id === target);
+    if (targetIndex <= stepIndex) {
+      setCurrentStep(target);
+    }
+  };
+
+  const handlePublish = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const detailsValidation = validateDetailsStep();
+    if (detailsValidation) {
+      setError(detailsValidation);
+      setCurrentStep('details');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
-    // 1. Get current Teacher ID
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
     if (!user) {
-      setError("Not authenticated.");
+      setError('Not authenticated.');
       setLoading(false);
       return;
     }
 
-    // 2. Insert Exam
     const generatedPin = Math.random().toString(36).substring(2, 8).toUpperCase();
     const { data: exam, error: examError } = await supabase
       .from('exams')
       .insert({
         teacher_id: user.id,
-        exam_name: examData.exam_name,
+        exam_name: examData.exam_name.trim(),
         duration_minutes: examData.duration_minutes,
         total_questions: examData.total_questions,
         live_date: new Date(examData.live_date).toISOString(),
         dead_date: new Date(examData.dead_date).toISOString(),
-        pin_code: generatedPin
+        pin_code: generatedPin,
       })
       .select()
       .single();
 
     if (examError || !exam) {
-      console.error(examError);
       setError(normalizeErrorMessage(examError, 'Failed to create exam setup.'));
       setLoading(false);
       return;
     }
 
-    // 3. Insert Coding Question with Test Cases
-    if (codingQuestion.question_text.trim() !== '') {
+    if (codingEnabled) {
       const { error: codeError } = await supabase
         .from('coding_questions')
         .insert({
           exam_id: exam.id,
-          question_text: codingQuestion.question_text,
-          description: codingQuestion.description,
-          test_cases: testCases.filter(tc => tc.input.trim() || tc.expectedOutput.trim())
+          question_text: codingQuestion.question_text.trim(),
+          description: codingQuestion.description.trim(),
+          test_cases: testCases.filter((tc) => tc.input.trim() || tc.expectedOutput.trim()),
         });
-      
+
       if (codeError) {
-         console.error("Failed to append coding question", codeError);
-         showToast({
-           variant: 'warning',
-           title: 'Exam created',
-           message: 'Coding question could not be attached. You can add it later.',
-         });
+        console.error('Failed to append coding question', codeError);
+        showToast({
+          variant: 'warning',
+          title: 'Exam created',
+          message: 'Coding challenge could not be attached. You can add it later.',
+        });
       }
     }
 
-    setLoading(false);
     showToast({
       variant: 'success',
       title: 'Exam created',
-      message: 'Assessment has been created successfully.',
+      message: 'Continue by adding questions to this exam.',
     });
-    router.push('/teacher/dashboard');
+    setLoading(false);
+    router.push(`/teacher/add-questions?exam=${exam.id}`);
   };
 
-  const inputStyles = "w-full bg-[var(--color-soft-cloud)] border border-[var(--color-hairline)] rounded-[8px] px-4 py-2.5 text-[14px] font-medium focus:outline-none focus:border-[var(--color-rausch)] transition-all";
+  const inputStyles =
+    'w-full rounded-[8px] border border-hairline bg-soft-cloud px-3 py-2.5 text-[13px] font-medium text-ink outline-none transition-colors focus:border-rausch';
+  const areaStyles =
+    'w-full resize-none rounded-[8px] border border-hairline bg-soft-cloud px-3 py-2.5 text-[13px] font-medium text-ink outline-none transition-colors focus:border-rausch';
 
   return (
     <div className="w-full">
-        <div className="max-w-[700px] mx-auto">
-          <motion.div {...fadeUp} className="mb-6 text-center">
-            <h1 className="text-[28px] font-display font-bold text-[var(--color-ink)] mb-2">New Assessment.</h1>
-            <p className="text-[14px] text-[var(--color-ash)] font-medium">Configure timeline, constraints, and programming tasks.</p>
-          </motion.div>
+      <div className="mx-auto max-w-[1320px]">
+        <motion.div {...fadeUp} className="mb-7 flex flex-col gap-2">
+          <h1 className="text-section-heading tracking-tight text-ink">Create Assessment.</h1>
+          <p className="text-body-standard text-ash">
+            Build exam configuration in guided steps, then publish and continue directly to the question bank.
+          </p>
+        </motion.div>
 
-          <motion.form
-            onSubmit={handleCreate}
-            className="flex flex-col gap-6"
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.1, ease: [0.25, 0.46, 0.45, 0.94] as const }}
-          >
-            <AnimatePresence mode="wait">
-              <FeedbackBanner message={error} variant="error" />
-            </AnimatePresence>
-            
-            {/* Base Meta Settings */}
-            <Card elevated className="p-6 bg-white rounded-[16px]" delay={0.05}>
-               <h3 className="text-[18px] font-display font-bold text-[var(--color-ink)] mb-6 tracking-tight">Timeline & Details</h3>
-               <div className="flex flex-col gap-4">
-                 <div>
-                    <label className="text-[11px] font-bold text-[var(--color-ash)] uppercase tracking-wider mb-1 block">Course or Assessment Name</label>
+        <div className="mb-4">
+          <FeedbackBanner message={error} variant="error" />
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.08fr_0.92fr]">
+          <Card elevated className="rounded-[12px] bg-white p-5 md:p-6" delay={0}>
+            <div className="mb-5">
+              <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+                {steps.map((step, index) => {
+                  const isActive = step.id === currentStep;
+                  const isComplete = index < stepIndex;
+                  return (
+                    <button
+                      type="button"
+                      key={step.id}
+                      onClick={() => goToStep(step.id)}
+                      className={`rounded-[8px] border px-2 py-2 text-left transition-colors ${
+                        isActive
+                          ? 'border-rausch bg-rausch/5'
+                          : isComplete
+                            ? 'border-hairline bg-soft-cloud/50 hover:border-rausch/40'
+                            : 'border-hairline bg-white'
+                      }`}
+                    >
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-mute">
+                        Step {index + 1}
+                      </p>
+                      <p className={`mt-0.5 text-[12px] font-semibold ${isActive ? 'text-rausch' : 'text-ink'}`}>
+                        {step.label}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <form onSubmit={handlePublish} className="flex flex-col gap-5">
+              {currentStep === 'details' && (
+                <div className="flex flex-col gap-4">
+                  <h2 className="text-card-title text-ink">Exam Details</h2>
+                  <div>
+                    <label className="mb-1 block text-caption font-semibold uppercase tracking-wider text-ash">
+                      Course or Assessment Name
+                    </label>
                     <input
                       required
                       type="text"
                       className={inputStyles}
                       placeholder="e.g. CS-101 Final Exam"
                       value={examData.exam_name}
-                      onChange={e => setExamData({...examData, exam_name: e.target.value})}
+                      onChange={(e) => setExamData((prev) => ({ ...prev, exam_name: e.target.value }))}
                     />
-                 </div>
-                 <div className="grid grid-cols-2 gap-4">
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                     <div>
-                      <label className="text-[11px] font-bold text-[var(--color-ash)] uppercase tracking-wider mb-1 block">Duration (Minutes)</label>
+                      <label className="mb-1 block text-caption font-semibold uppercase tracking-wider text-ash">
+                        Duration (Minutes)
+                      </label>
                       <input
                         required
                         type="number"
                         min={1}
                         className={inputStyles}
                         value={examData.duration_minutes}
-                        onChange={e => setExamData({...examData, duration_minutes: Number(e.target.value)})}
+                        onChange={(e) =>
+                          setExamData((prev) => ({ ...prev, duration_minutes: Number(e.target.value) }))
+                        }
                       />
                     </div>
                     <div>
-                      <label className="text-[11px] font-bold text-[var(--color-ash)] uppercase tracking-wider mb-1 block">Total MCQ Count</label>
+                      <label className="mb-1 block text-caption font-semibold uppercase tracking-wider text-ash">
+                        Total MCQ Target
+                      </label>
                       <input
                         required
                         type="number"
                         min={0}
                         className={inputStyles}
                         value={examData.total_questions}
-                        onChange={e => setExamData({...examData, total_questions: Number(e.target.value)})}
+                        onChange={(e) =>
+                          setExamData((prev) => ({ ...prev, total_questions: Number(e.target.value) }))
+                        }
                       />
                     </div>
-                 </div>
-                 <div className="grid grid-cols-2 gap-4">
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                     <div>
-                      <label className="text-[11px] font-bold text-[var(--color-ash)] uppercase tracking-wider mb-1 block">Live Date</label>
+                      <label className="mb-1 block text-caption font-semibold uppercase tracking-wider text-ash">
+                        Live Date
+                      </label>
                       <input
                         required
                         type="datetime-local"
                         className={inputStyles}
                         value={examData.live_date}
-                        onChange={e => setExamData({...examData, live_date: e.target.value})}
+                        onChange={(e) => setExamData((prev) => ({ ...prev, live_date: e.target.value }))}
                       />
                     </div>
                     <div>
-                      <label className="text-[11px] font-bold text-[var(--color-ash)] uppercase tracking-wider mb-1 block">Dead Date</label>
+                      <label className="mb-1 block text-caption font-semibold uppercase tracking-wider text-ash">
+                        Dead Date
+                      </label>
                       <input
                         required
                         type="datetime-local"
                         className={inputStyles}
                         value={examData.dead_date}
-                        onChange={e => setExamData({...examData, dead_date: e.target.value})}
+                        onChange={(e) => setExamData((prev) => ({ ...prev, dead_date: e.target.value }))}
                       />
                     </div>
-                 </div>
-               </div>
-            </Card>
+                  </div>
+                </div>
+              )}
 
-            {/* Attached Programming Scenario */}
-            <Card elevated className="p-6 bg-white rounded-[16px]" delay={0.15}>
-               <h3 className="text-[18px] font-display font-bold text-[var(--color-ink)] mb-2 tracking-tight">Programming Challenge</h3>
-               <p className="text-[12px] text-[var(--color-ash)] mb-6 font-medium">Attach an optional coding problem to the end of this exam.</p>
-               <div className="flex flex-col gap-4">
-                 <div>
-                    <label className="text-[11px] font-bold text-[var(--color-ash)] uppercase tracking-wider mb-1 block">Short Title / Objective</label>
+              {currentStep === 'coding' && (
+                <div className="flex flex-col gap-4">
+                  <h2 className="text-card-title text-ink">Coding Challenge</h2>
+                  <p className="text-[12px] font-medium text-ash">
+                    Optional. Leave title empty if this exam has only MCQs.
+                  </p>
+                  <div>
+                    <label className="mb-1 block text-caption font-semibold uppercase tracking-wider text-ash">
+                      Challenge Title
+                    </label>
                     <input
                       type="text"
                       className={inputStyles}
                       placeholder="e.g. Binary Tree Inversion"
                       value={codingQuestion.question_text}
-                      onChange={e => setCodingQuestion({...codingQuestion, question_text: e.target.value})}
+                      onChange={(e) =>
+                        setCodingQuestion((prev) => ({ ...prev, question_text: e.target.value }))
+                      }
                     />
-                 </div>
-                 <div>
-                    <label className="text-[11px] font-bold text-[var(--color-ash)] uppercase tracking-wider mb-1 block">Extended Description</label>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-caption font-semibold uppercase tracking-wider text-ash">
+                      Extended Description
+                    </label>
                     <textarea
-                      rows={4}
-                      className={`${inputStyles} resize-none`}
+                      rows={5}
+                      className={areaStyles}
                       placeholder="Specify boundaries, constraints, and requirements..."
                       value={codingQuestion.description}
-                      onChange={e => setCodingQuestion({...codingQuestion, description: e.target.value})}
+                      onChange={(e) =>
+                        setCodingQuestion((prev) => ({ ...prev, description: e.target.value }))
+                      }
                     />
-                 </div>
-               </div>
-            </Card>
+                  </div>
+                </div>
+              )}
 
-            {/* ── Test Suite Builder ── */}
-            <AnimatePresence>
-              {codingQuestion.question_text.trim() !== '' && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] as const }}
-                >
-                  <Card elevated className="p-6 bg-white rounded-[16px]" delay={0}>
-                    <div className="flex justify-between items-center mb-2">
-                      <h3 className="text-[18px] font-display font-bold text-[var(--color-ink)] tracking-tight">Test Suite</h3>
-                      <span className="text-[10px] font-bold text-[var(--color-mute)] uppercase tracking-widest">
-                        {testCases.length} CASE{testCases.length !== 1 ? 'S' : ''}
-                      </span>
-                    </div>
-                    <p className="text-[12px] text-[var(--color-ash)] mb-6 font-medium leading-relaxed">
-                      Define input/output pairs. The system will pipe <strong>stdin</strong> and expect specific <strong>stdout</strong> results.
-                    </p>
+              {currentStep === 'tests' && (
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-card-title text-ink">Test Cases</h2>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-mute">
+                      {testCases.length} case{testCases.length === 1 ? '' : 's'}
+                    </span>
+                  </div>
+                  {!codingEnabled && (
+                    <FeedbackBanner
+                      message="Add a coding challenge title first if you want to configure test cases."
+                      variant="info"
+                      compact
+                    />
+                  )}
 
-                    <motion.div
-                      variants={staggerContainer}
-                      initial="initial"
-                      animate="animate"
-                      className="flex flex-col gap-3"
-                    >
-                      <AnimatePresence>
+                  <AnimatePresence>
+                    {codingEnabled && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        className="flex flex-col gap-3"
+                      >
                         {testCases.map((tc, idx) => (
-                          <motion.div
-                            key={idx}
-                            initial={{ opacity: 0, scale: 0.98 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.98 }}
-                            className="bg-[var(--color-soft-cloud)] border border-[var(--color-hairline)] rounded-[10px] p-4"
+                          <div
+                            key={`case-${idx}`}
+                            className="rounded-[10px] border border-hairline bg-soft-cloud/40 p-3"
                           >
-                            <div className="flex justify-between items-center mb-3">
-                              <span className="text-[10px] font-bold text-[var(--color-mute)] uppercase tracking-widest">
+                            <div className="mb-2 flex items-center justify-between">
+                              <span className="text-[11px] font-semibold uppercase tracking-wide text-mute">
                                 Case #{idx + 1}
                               </span>
-                              <motion.button
+                              <button
                                 type="button"
-                                whileTap={{ scale: 0.95 }}
+                                className="text-[11px] font-semibold uppercase tracking-wide text-rausch"
                                 onClick={() => removeTestCase(idx)}
-                                className="text-[10px] text-[var(--color-rausch)] font-bold uppercase tracking-wider hover:underline"
                               >
                                 Remove
-                              </motion.button>
+                              </button>
                             </div>
-
-                            <div className="flex flex-col gap-3">
-                              <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                  <label className="text-[10px] font-bold text-[var(--color-ash)] mb-1 block uppercase tracking-widest">
-                                    Input
-                                  </label>
-                                  <textarea
-                                    rows={2}
-                                    className="w-full resize-none bg-white border border-[var(--color-hairline)] rounded-[6px] px-3 py-2 text-[13px] font-mono font-medium focus:outline-none focus:border-[var(--color-rausch)]"
-                                    placeholder="stdin"
-                                    value={tc.input}
-                                    onChange={e => updateTestCase(idx, 'input', e.target.value)}
-                                  />
-                                </div>
-                                <div>
-                                  <label className="text-[10px] font-bold text-[var(--color-ash)] mb-1 block uppercase tracking-widest">
-                                    Output
-                                  </label>
-                                  <textarea
-                                    rows={2}
-                                    className="w-full resize-none bg-white border border-[var(--color-hairline)] rounded-[6px] px-3 py-2 text-[13px] font-mono font-medium focus:outline-none focus:border-[var(--color-rausch)]"
-                                    placeholder="stdout"
-                                    value={tc.expectedOutput}
-                                    onChange={e => updateTestCase(idx, 'expectedOutput', e.target.value)}
-                                  />
-                                </div>
+                            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                              <div>
+                                <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-ash">
+                                  Input
+                                </label>
+                                <textarea
+                                  rows={2}
+                                  className={areaStyles}
+                                  placeholder="stdin"
+                                  value={tc.input}
+                                  onChange={(e) => updateTestCase(idx, 'input', e.target.value)}
+                                />
+                              </div>
+                              <div>
+                                <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-ash">
+                                  Expected Output
+                                </label>
+                                <textarea
+                                  rows={2}
+                                  className={areaStyles}
+                                  placeholder="stdout"
+                                  value={tc.expectedOutput}
+                                  onChange={(e) => updateTestCase(idx, 'expectedOutput', e.target.value)}
+                                />
                               </div>
                             </div>
-                          </motion.div>
+                          </div>
                         ))}
-                      </AnimatePresence>
 
-                      <motion.button
-                        type="button"
-                        onClick={addTestCase}
-                        whileHover={{ borderColor: '#ff385c', color: '#ff385c', scale: 1.005 }}
-                        whileTap={{ scale: 0.995 }}
-                        className="w-full py-2.5 border-2 border-dashed border-[var(--color-hairline)] rounded-[10px] text-[13px] font-bold text-[var(--color-mute)] transition-all hover:bg-[var(--color-rausch)]/5"
-                      >
-                        + Add Case
-                      </motion.button>
-                    </motion.div>
-                  </Card>
-                </motion.div>
+                        <button
+                          type="button"
+                          onClick={addTestCase}
+                          className="rounded-[10px] border border-dashed border-hairline bg-white py-2 text-[12px] font-semibold text-mute transition-colors hover:border-rausch hover:text-rausch"
+                        >
+                          + Add Case
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               )}
-            </AnimatePresence>
 
-            <motion.div
-              {...fadeIn}
-              transition={{ ...fadeIn.transition, delay: 0.3 }}
-              className="flex justify-end gap-3 mt-2"
-            >
-              <Button type="button" variant="pill" onClick={() => router.back()}>Cancel</Button>
-              <Button type="submit" variant="primary" disabled={loading} className="w-[140px]">
-                 {loading ? 'Publishing...' : 'Publish Draft'}
-              </Button>
-            </motion.div>
-          </motion.form>
+              {currentStep === 'review' && (
+                <div className="flex flex-col gap-4">
+                  <h2 className="text-card-title text-ink">Review & Publish</h2>
+                  <p className="text-[12px] font-medium text-ash">
+                    Confirm this setup, publish the assessment, then continue to the question bank manager.
+                  </p>
+                  <div className="rounded-[10px] border border-hairline bg-soft-cloud/40 p-3">
+                    <div className="flex flex-col gap-2">
+                      {reviewChecks.map((check) => (
+                        <div key={check.label} className="flex items-center gap-2 text-[12px]">
+                          <span className={check.ok ? 'text-emerald-600' : 'text-red-500'}>
+                            {check.ok ? '✓' : '•'}
+                          </span>
+                          <span className={check.ok ? 'text-ink' : 'text-ash'}>{check.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
 
+              <motion.div
+                {...fadeIn}
+                transition={{ ...fadeIn.transition, delay: 0.1 }}
+                className="mt-1 flex items-center justify-between border-t border-hairline pt-4"
+              >
+                <Button type="button" variant="secondary" onClick={goPrevStep} disabled={stepIndex === 0 || loading}>
+                  Previous
+                </Button>
+
+                <div className="flex items-center gap-2">
+                  <Button type="button" variant="pill-link" onClick={() => router.back()} disabled={loading}>
+                    Cancel
+                  </Button>
+                  {currentStep === 'review' ? (
+                    <Button type="submit" variant="primary" disabled={loading}>
+                      {loading ? 'Publishing...' : 'Publish & Continue'}
+                    </Button>
+                  ) : (
+                    <Button type="button" variant="primary" onClick={goNextStep} disabled={loading}>
+                      Next Step
+                    </Button>
+                  )}
+                </div>
+              </motion.div>
+            </form>
+          </Card>
+
+          <Card elevated className="rounded-[12px] bg-white p-5 md:p-6" delay={0.04}>
+            <div className="xl:sticky xl:top-5">
+              <h2 className="text-card-title text-ink">Live Preview</h2>
+              <p className="mt-1 text-[12px] font-medium text-ash">
+                Compact summary of the assessment that will be published.
+              </p>
+
+              <div className="mt-4 flex flex-col gap-3">
+                <div className="rounded-[10px] border border-hairline bg-soft-cloud/40 p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-mute">Assessment</p>
+                  <p className="mt-1 text-[14px] font-semibold text-ink">
+                    {examData.exam_name.trim() || 'Untitled assessment'}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-[10px] border border-hairline bg-soft-cloud/40 p-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-mute">Duration</p>
+                    <p className="mt-1 text-[13px] font-semibold text-ink">{examData.duration_minutes} minutes</p>
+                  </div>
+                  <div className="rounded-[10px] border border-hairline bg-soft-cloud/40 p-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-mute">MCQ Target</p>
+                    <p className="mt-1 text-[13px] font-semibold text-ink">{examData.total_questions}</p>
+                  </div>
+                </div>
+
+                <div className="rounded-[10px] border border-hairline bg-soft-cloud/40 p-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-mute">Schedule</p>
+                    <span
+                      className={`rounded-[6px] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                        scheduleStatus.tone === 'live'
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : scheduleStatus.tone === 'upcoming'
+                            ? 'bg-blue-100 text-blue-700'
+                            : scheduleStatus.tone === 'ended'
+                              ? 'bg-neutral-100 text-neutral-600'
+                              : scheduleStatus.tone === 'error'
+                                ? 'bg-red-100 text-red-700'
+                                : 'bg-amber-100 text-amber-700'
+                      }`}
+                    >
+                      {scheduleStatus.label}
+                    </span>
+                  </div>
+                  <div className="mt-2 space-y-1 text-[12px]">
+                    <p className="text-ash">
+                      Start: <span className="font-semibold text-ink">{formatDateTime(examData.live_date)}</span>
+                    </p>
+                    <p className="text-ash">
+                      End: <span className="font-semibold text-ink">{formatDateTime(examData.dead_date)}</span>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="rounded-[10px] border border-hairline bg-soft-cloud/40 p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-mute">Coding Section</p>
+                  <p className="mt-1 text-[12px] text-ash">
+                    {codingEnabled
+                      ? `${codingQuestion.question_text.trim()} (${completedCaseCount}/${testCases.length} cases complete)`
+                      : 'No coding challenge attached'}
+                  </p>
+                </div>
+
+                <div className="rounded-[10px] border border-hairline bg-soft-cloud/40 p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-mute">PIN Generation</p>
+                  <p className="mt-1 text-[12px] text-ash">
+                    A 6-character exam PIN is generated automatically when you publish.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </Card>
         </div>
+      </div>
     </div>
   );
 }

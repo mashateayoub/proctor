@@ -18,6 +18,8 @@ import { normalizeErrorMessage } from '@/lib/errors';
 
 type TakeStatus = 'in_progress' | 'completed';
 type CodingGrade = 'passed' | 'failed' | 'pending';
+type CodeInspectorTab = 'overview' | 'tests' | 'source';
+type TestResultFilter = 'all' | 'failed' | 'passed';
 
 interface CodeTestResult {
   passed: boolean;
@@ -61,6 +63,7 @@ interface SelectedCodeState {
   submissions: CodingSubmission[];
   resultId: string;
   currentGrade: CodingGrade;
+  activeSubmissionIndex: number;
 }
 
 interface Screenshot {
@@ -124,6 +127,29 @@ function formatEventType(type: string) {
   return normalized.replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
+function getRuntimeBadge(executionTime: number) {
+  if (executionTime <= 0) return { label: 'No runtime', className: 'bg-slate-100 text-slate-700' };
+  if (executionTime <= 250) return { label: 'Fast', className: 'bg-emerald-100 text-emerald-700' };
+  if (executionTime <= 1000) return { label: 'Normal', className: 'bg-blue-100 text-blue-700' };
+  return { label: 'Slow', className: 'bg-amber-100 text-amber-700' };
+}
+
+function getInspectorRationale(submission: CodingSubmission | null, grade: CodingGrade) {
+  if (!submission) return 'No code submission payload found for this take.';
+  const total = submission.totalCount || submission.testResults?.length || 0;
+  const passed = submission.passedCount ?? submission.testResults?.filter((tr) => tr.passed).length ?? 0;
+  const failed = Math.max(total - passed, 0);
+
+  if (total === 0) {
+    return grade === 'pending'
+      ? 'No automated suite is attached. Use manual code review before final grading.'
+      : 'Manual grading was applied without test-suite evidence.';
+  }
+  if (failed === 0) return 'All automated tests passed. Submission behavior aligns with expected outputs.';
+  if (failed <= 2) return 'Most tests passed, but there are targeted mismatches worth review before final grade.';
+  return 'Multiple test failures detected. Submission likely needs significant correction.';
+}
+
 function AnomalyIndicator({ counts }: { counts: ReturnType<typeof getAnomalyCounts> }) {
   if (counts.total === 0) {
     return <span className="text-[12px] font-semibold text-emerald-700">Clean</span>;
@@ -163,6 +189,8 @@ export default function ResultsPage() {
   const [loading, setLoading] = useState(true);
   const [pageError, setPageError] = useState<string | null>(null);
   const [selectedCode, setSelectedCode] = useState<SelectedCodeState | null>(null);
+  const [activeCodeTab, setActiveCodeTab] = useState<CodeInspectorTab>('overview');
+  const [activeTestFilter, setActiveTestFilter] = useState<TestResultFilter>('all');
   const [selectedScreenshots, setSelectedScreenshots] = useState<Screenshot[] | null>(null);
   const [activeSnapTab, setActiveSnapTab] = useState<SnapTab>('camera');
   const [signedSnapshotUrls, setSignedSnapshotUrls] = useState<Record<string, string>>({});
@@ -337,6 +365,26 @@ export default function ResultsPage() {
     return snapshot.url;
   };
 
+  const activeSubmission = selectedCode
+    ? selectedCode.submissions[selectedCode.activeSubmissionIndex] || null
+    : null;
+  const activeTestResults = activeSubmission?.testResults || [];
+  const passedCount =
+    activeSubmission?.passedCount ?? activeTestResults.filter((result) => result.passed).length;
+  const totalCount = activeSubmission?.totalCount ?? activeTestResults.length;
+  const failedCount = Math.max(totalCount - passedCount, 0);
+  const passRate = totalCount > 0 ? Math.round((passedCount / totalCount) * 100) : null;
+  const runtimeBadge = getRuntimeBadge(activeSubmission?.executionTime || 0);
+  const inspectorRationale = getInspectorRationale(activeSubmission, selectedCode?.currentGrade || 'pending');
+  const filteredTestResults = activeTestResults
+    .slice()
+    .sort((a, b) => Number(a.passed) - Number(b.passed))
+    .filter((result) => {
+      if (activeTestFilter === 'failed') return !result.passed;
+      if (activeTestFilter === 'passed') return result.passed;
+      return true;
+    });
+
   return (
     <>
       <div className="w-full">
@@ -488,13 +536,16 @@ export default function ResultsPage() {
                               <Button
                                 variant="filter"
                                 className="min-w-[120px] text-[12px]"
-                                onClick={() =>
+                                onClick={() => {
+                                  setActiveCodeTab('overview');
+                                  setActiveTestFilter('all');
                                   setSelectedCode({
                                     submissions: result.coding_submissions || [],
                                     resultId: result.id,
                                     currentGrade: result.coding_grade || 'pending',
-                                  })
-                                }
+                                    activeSubmissionIndex: 0,
+                                  });
+                                }}
                                 disabled={!result.coding_submissions || result.coding_submissions.length === 0}
                               >
                                 Inspect & Grade
@@ -529,138 +580,247 @@ export default function ResultsPage() {
           >
             <motion.div
               {...modalVariants}
-              className="flex max-h-[85vh] w-full max-w-[800px] flex-col overflow-hidden rounded-[16px] bg-white shadow-2xl"
+              className="flex max-h-[90vh] w-full max-w-[980px] flex-col overflow-hidden rounded-[16px] bg-white shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between border-b border-hairline p-6">
-                <h2 className="text-card-title tracking-tight text-ink">Code Submission Inspector</h2>
-                <motion.button
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={() => setSelectedCode(null)}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-soft-cloud text-ink transition-colors hover:bg-black/10"
-                >
-                  ✕
-                </motion.button>
+              <div className="border-b border-hairline p-6">
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 className="text-card-title tracking-tight text-ink">Code Submission Inspector</h2>
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => setSelectedCode(null)}
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-soft-cloud text-ink transition-colors hover:bg-black/10"
+                  >
+                    ✕
+                  </motion.button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
+                  <div className="rounded-[8px] border border-hairline bg-soft-cloud/40 px-3 py-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-mute">Grade</p>
+                    <p className={`mt-1 inline-flex rounded-[6px] px-2 py-0.5 text-[11px] font-semibold ${gradeColors[selectedCode.currentGrade]}`}>
+                      {gradeLabels[selectedCode.currentGrade]}
+                    </p>
+                  </div>
+                  <div className="rounded-[8px] border border-hairline bg-soft-cloud/40 px-3 py-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-mute">Pass Rate</p>
+                    <p className="mt-1 text-[13px] font-semibold text-ink">
+                      {passRate !== null ? `${passRate}%` : 'N/A'}
+                    </p>
+                  </div>
+                  <div className="rounded-[8px] border border-hairline bg-soft-cloud/40 px-3 py-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-mute">Tests</p>
+                    <p className="mt-1 text-[13px] font-semibold text-ink">
+                      {passedCount}/{totalCount} passed
+                    </p>
+                  </div>
+                  <div className="rounded-[8px] border border-hairline bg-soft-cloud/40 px-3 py-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-mute">Runtime</p>
+                    <p className={`mt-1 inline-flex rounded-[6px] px-2 py-0.5 text-[11px] font-semibold ${runtimeBadge.className}`}>
+                      {runtimeBadge.label} {activeSubmission?.executionTime ? `(${activeSubmission.executionTime}ms)` : ''}
+                    </p>
+                  </div>
+                  <div className="rounded-[8px] border border-hairline bg-soft-cloud/40 px-3 py-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-mute">Language</p>
+                    <p className="mt-1 text-[13px] font-semibold uppercase text-ink">{activeSubmission?.language || 'N/A'}</p>
+                  </div>
+                </div>
+
+                <p className="mt-3 text-[12px] font-medium text-ash">{inspectorRationale}</p>
               </div>
 
-              <div className="border-b border-hairline bg-soft-cloud px-6 py-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="text-[13px] font-semibold text-ash">Your Grade:</span>
-                    <motion.span
-                      key={selectedCode.currentGrade}
-                      initial={{ scale: 0.8, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      className={`rounded-[6px] px-3 py-1 text-[12px] font-bold ${gradeColors[selectedCode.currentGrade]}`}
-                    >
-                      {gradeLabels[selectedCode.currentGrade]}
-                    </motion.span>
-                  </div>
+              <div className="border-b border-hairline bg-soft-cloud px-6 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex gap-2">
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => setCodingGrade(selectedCode.resultId, 'passed')}
-                      className={`rounded-[6px] px-4 py-1.5 text-[12px] font-semibold transition-all ${
-                        selectedCode.currentGrade === 'passed'
-                          ? 'bg-green-600 text-white ring-2 ring-green-400'
-                          : 'bg-green-100 text-green-800 hover:bg-green-200'
-                      }`}
+                    <Button
+                      variant={activeCodeTab === 'overview' ? 'primary-blue' : 'filter'}
+                      size="xs"
+                      onClick={() => setActiveCodeTab('overview')}
                     >
-                      ✓ Pass
-                    </motion.button>
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => setCodingGrade(selectedCode.resultId, 'failed')}
-                      className={`rounded-[6px] px-4 py-1.5 text-[12px] font-semibold transition-all ${
-                        selectedCode.currentGrade === 'failed'
-                          ? 'bg-red-600 text-white ring-2 ring-red-400'
-                          : 'bg-red-100 text-red-800 hover:bg-red-200'
-                      }`}
+                      Overview
+                    </Button>
+                    <Button
+                      variant={activeCodeTab === 'tests' ? 'primary-blue' : 'filter'}
+                      size="xs"
+                      onClick={() => setActiveCodeTab('tests')}
                     >
-                      ✗ Fail
-                    </motion.button>
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => setCodingGrade(selectedCode.resultId, 'pending')}
-                      className={`rounded-[6px] px-4 py-1.5 text-[12px] font-semibold transition-all ${
-                        selectedCode.currentGrade === 'pending'
-                          ? 'bg-yellow-500 text-white ring-2 ring-yellow-300'
-                          : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
-                      }`}
+                      Test Results
+                    </Button>
+                    <Button
+                      variant={activeCodeTab === 'source' ? 'primary-blue' : 'filter'}
+                      size="xs"
+                      onClick={() => setActiveCodeTab('source')}
                     >
-                      ◷ Pending
-                    </motion.button>
+                      Source Code
+                    </Button>
                   </div>
+                  {selectedCode.submissions.length > 1 && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-semibold uppercase tracking-wide text-ash">Submission</span>
+                      <select
+                        className="h-7 rounded-[7px] border border-hairline bg-white px-2 text-[11px] font-semibold text-ink outline-none focus:border-rausch"
+                        value={selectedCode.activeSubmissionIndex}
+                        onChange={(event) =>
+                          setSelectedCode((prev) =>
+                            prev ? { ...prev, activeSubmissionIndex: Number(event.target.value) } : prev,
+                          )
+                        }
+                      >
+                        {selectedCode.submissions.map((_, index) => (
+                          <option key={index} value={index}>
+                            Attempt {index + 1}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div className="flex h-full flex-col gap-6 overflow-y-auto bg-soft-cloud p-6">
-                {selectedCode.submissions.length === 0 ? (
+              <div className="flex h-full flex-col gap-4 overflow-y-auto bg-soft-cloud p-6">
+                {!activeSubmission ? (
                   <p className="pt-12 text-center text-body-standard text-ash">No code compiled.</p>
-                ) : (
-                  selectedCode.submissions.map((submission, i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0, y: 16 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3, delay: i * 0.1 }}
-                      className="flex flex-col gap-4"
-                    >
-                      {submission.testResults && submission.testResults.length > 0 && (
-                        <div className="rounded-[8px] bg-charcoal p-5">
-                          <div className="mb-4 flex items-center justify-between border-b border-white/10 pb-3">
-                            <span className="text-[13px] font-semibold text-white">Test Suite Results</span>
-                            <span
-                              className={`rounded-[6px] px-3 py-1 text-[12px] font-bold ${
-                                submission.passedCount === submission.totalCount
-                                  ? 'bg-green-600/20 text-green-400'
-                                  : 'bg-red-600/20 text-red-400'
-                              }`}
-                            >
-                              {submission.passedCount}/{submission.totalCount} Passed
-                            </span>
-                          </div>
-                          <motion.div variants={staggerContainer} initial="initial" animate="animate" className="flex flex-col gap-2">
-                            {submission.testResults.map((testResult, j) => (
-                              <motion.div
-                                key={j}
-                                variants={staggerItem}
-                                className={`flex items-start gap-3 rounded-[6px] p-3 font-mono text-[12px] ${
-                                  testResult.passed ? 'bg-green-900/10' : 'bg-red-900/10'
+                ) : activeCodeTab === 'overview' ? (
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div className="rounded-[10px] border border-hairline bg-white p-4">
+                      <h3 className="text-[13px] font-semibold text-ink">Execution Snapshot</h3>
+                      <div className="mt-3 space-y-2 text-[12px]">
+                        <p className="text-ash">Language: <span className="font-semibold uppercase text-ink">{activeSubmission.language}</span></p>
+                        <p className="text-ash">Runtime: <span className="font-semibold text-ink">{activeSubmission.executionTime}ms</span></p>
+                        <p className="text-ash">Total tests: <span className="font-semibold text-ink">{totalCount}</span></p>
+                        <p className="text-ash">Failed tests: <span className={`font-semibold ${failedCount > 0 ? 'text-red-600' : 'text-emerald-600'}`}>{failedCount}</span></p>
+                      </div>
+                    </div>
+                    <div className="rounded-[10px] border border-hairline bg-white p-4">
+                      <h3 className="text-[13px] font-semibold text-ink">Quality Signal</h3>
+                      <div className="mt-3 space-y-2 text-[12px]">
+                        <p className="text-ash">
+                          Current decision:
+                          <span className={`ml-1 rounded-[6px] px-1.5 py-0.5 text-[11px] font-semibold ${gradeColors[selectedCode.currentGrade]}`}>
+                            {gradeLabels[selectedCode.currentGrade]}
+                          </span>
+                        </p>
+                        <p className="text-ash">
+                          Confidence:
+                          <span className="ml-1 font-semibold text-ink">
+                            {passRate === null ? 'Manual review needed' : passRate >= 90 ? 'High' : passRate >= 60 ? 'Moderate' : 'Low'}
+                          </span>
+                        </p>
+                        <p className="text-ash">
+                          Recommendation:
+                          <span className="ml-1 font-semibold text-ink">
+                            {failedCount === 0 ? 'Pass candidate' : failedCount <= 2 ? 'Review before pass' : 'Fail or pending review'}
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : activeCodeTab === 'tests' ? (
+                  <div className="flex flex-col gap-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2 rounded-[10px] border border-hairline bg-white p-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[12px] font-semibold text-ash">Filters:</span>
+                        <Button variant={activeTestFilter === 'all' ? 'primary-blue' : 'filter'} size="xs" onClick={() => setActiveTestFilter('all')}>
+                          All ({activeTestResults.length})
+                        </Button>
+                        <Button variant={activeTestFilter === 'failed' ? 'primary-blue' : 'filter'} size="xs" onClick={() => setActiveTestFilter('failed')}>
+                          Failed ({failedCount})
+                        </Button>
+                        <Button variant={activeTestFilter === 'passed' ? 'primary-blue' : 'filter'} size="xs" onClick={() => setActiveTestFilter('passed')}>
+                          Passed ({passedCount})
+                        </Button>
+                      </div>
+                      <span className="text-[12px] font-semibold text-ash">
+                        Showing {filteredTestResults.length} / {activeTestResults.length}
+                      </span>
+                    </div>
+
+                    {filteredTestResults.length === 0 ? (
+                      <p className="rounded-[10px] border border-hairline bg-white p-6 text-center text-[12px] font-medium text-ash">
+                        No test cases match current filter.
+                      </p>
+                    ) : (
+                      <div className="flex flex-col gap-2">
+                        {filteredTestResults.map((testResult, index) => (
+                          <div
+                            key={`${testResult.label}-${index}`}
+                            className={`rounded-[10px] border bg-white p-3 ${
+                              testResult.passed ? 'border-emerald-200' : 'border-red-200'
+                            }`}
+                          >
+                            <div className="mb-2 flex items-center justify-between">
+                              <span className="text-[12px] font-semibold text-ink">{testResult.label || `Test ${index + 1}`}</span>
+                              <span
+                                className={`rounded-[6px] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                                  testResult.passed ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
                                 }`}
                               >
-                                <span className={`mt-0.5 ${testResult.passed ? 'text-green-400' : 'text-red-400'}`}>
-                                  {testResult.passed ? '✓' : '✗'}
-                                </span>
-                                <div className="flex-1">
-                                  <div className="mb-1 font-semibold text-white/80">{testResult.label}</div>
-                                  <div className="text-white/40">
-                                    Expected: <span className="text-green-300">{testResult.expected}</span>
-                                    {!testResult.passed && (
-                                      <> - Got: <span className="text-red-300">{testResult.actual}</span></>
-                                    )}
-                                  </div>
-                                </div>
-                              </motion.div>
-                            ))}
-                          </motion.div>
-                        </div>
-                      )}
-
-                      <div className="overflow-hidden rounded-[8px] bg-charcoal p-6 font-mono text-[12px] text-white">
-                        <div className="mb-4 flex items-center justify-between border-b border-white/10 pb-4">
-                          <span className="uppercase tracking-wider text-[#ff385c]">{submission.language}</span>
-                          <span className="text-white/60">{submission.executionTime}ms</span>
-                        </div>
-                        <pre className="whitespace-pre-wrap leading-relaxed opacity-90">{submission.code}</pre>
+                                {testResult.passed ? 'Passed' : 'Failed'}
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-1 gap-2 text-[12px] md:grid-cols-2">
+                              <div className="rounded-[8px] bg-soft-cloud/60 p-2">
+                                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-mute">Expected</p>
+                                <p className="font-mono text-ink">{testResult.expected}</p>
+                              </div>
+                              <div className="rounded-[8px] bg-soft-cloud/60 p-2">
+                                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-mute">Actual</p>
+                                <p className={`font-mono ${testResult.passed ? 'text-ink' : 'text-red-600'}`}>
+                                  {testResult.actual ?? testResult.expected}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    </motion.div>
-                  ))
+                    )}
+                  </div>
+                ) : (
+                  <div className="overflow-hidden rounded-[10px] border border-hairline bg-charcoal">
+                    <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-white/70">
+                        Source ({activeSubmission.language})
+                      </span>
+                      <span className="text-[11px] font-semibold text-white/60">{activeSubmission.executionTime}ms</span>
+                    </div>
+                    <pre className="max-h-[52vh] overflow-auto whitespace-pre-wrap px-4 py-4 font-mono text-[12px] leading-relaxed text-white/90">
+                      {activeSubmission.code}
+                    </pre>
+                  </div>
                 )}
+              </div>
+
+              <div className="border-t border-hairline bg-white px-6 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[12px] font-semibold text-ash">Decision:</span>
+                    <span className="text-[12px] font-medium text-ink">{inspectorRationale}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant={selectedCode.currentGrade === 'passed' ? 'primary-blue' : 'filter'}
+                      size="xs"
+                      onClick={() => setCodingGrade(selectedCode.resultId, 'passed')}
+                    >
+                      Pass
+                    </Button>
+                    <Button
+                      variant={selectedCode.currentGrade === 'failed' ? 'danger' : 'filter'}
+                      size="xs"
+                      onClick={() => setCodingGrade(selectedCode.resultId, 'failed')}
+                    >
+                      Fail
+                    </Button>
+                    <Button
+                      variant={selectedCode.currentGrade === 'pending' ? 'primary-blue' : 'filter'}
+                      size="xs"
+                      onClick={() => setCodingGrade(selectedCode.resultId, 'pending')}
+                    >
+                      Pending
+                    </Button>
+                  </div>
+                </div>
               </div>
             </motion.div>
           </motion.div>
