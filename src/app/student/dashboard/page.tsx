@@ -1,13 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { FeedbackBanner } from '@/components/ui/FeedbackBanner';
 import ProctorCamera from '@/components/ProctorCamera';
+import { CameraDiagnostics } from '@/components/ui/CameraDiagnostics';
 import { fadeUp, fadeIn, scaleIn } from '@/lib/motion';
 
 interface UnlockedExam {
@@ -20,26 +21,47 @@ interface UnlockedExam {
   teacher_name?: string;
 }
 
+function getExamStatus(exam: UnlockedExam) {
+  const now = new Date();
+  const liveAt = new Date(exam.live_date);
+  const deadAt = new Date(exam.dead_date);
+
+  if (now > deadAt) {
+    return { state: 'missed' as const, label: 'Deadline Passed' };
+  }
+  if (now < liveAt) {
+    return { state: 'upcoming' as const, label: 'Not Live Yet' };
+  }
+  return { state: 'live' as const, label: 'Live Now' };
+}
+
 export default function StudentDashboard() {
   const router = useRouter();
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   );
 
   const [pinCode, setPinCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [unlockedExam, setUnlockedExam] = useState<UnlockedExam | null>(null);
+  const [recentUnlockedExams, setRecentUnlockedExams] = useState<UnlockedExam[]>([]);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
 
-  const handleUnlock = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const activeStatus = useMemo(
+    () => (unlockedExam ? getExamStatus(unlockedExam) : null),
+    [unlockedExam],
+  );
+
+  const handleUnlock = async (event: React.FormEvent) => {
+    event.preventDefault();
     if (!pinCode.trim()) return;
+
     setLoading(true);
     setError(null);
 
     const cleanPin = pinCode.trim().toUpperCase();
-
     const { data, error: fetchError } = await supabase
       .from('exams')
       .select(`
@@ -50,153 +72,214 @@ export default function StudentDashboard() {
       .single();
 
     if (fetchError || !data) {
-      setError("Invalid PIN code. Please check with your instructor.");
+      setError('Invalid PIN code. Please check with your instructor.');
       setUnlockedExam(null);
-    } else {
-      setUnlockedExam({
-        ...data,
-        teacher_name: (data.users as any)?.name || 'Instructor'
-      });
+      setLoading(false);
+      return;
     }
-    setLoading(false);
-  };
 
-  const isExamLive = (dateStart: string, dateEnd: string) => {
-    const now = new Date();
-    return now >= new Date(dateStart) && now <= new Date(dateEnd);
-  };
-  
-  const isExamMissed = (dateEnd: string) => {
-    const now = new Date();
-    return now > new Date(dateEnd);
+    const nextExam: UnlockedExam = {
+      ...data,
+      teacher_name: ((data.users as { name?: string } | null)?.name || 'Instructor') as string,
+    };
+
+    setUnlockedExam(nextExam);
+    setRecentUnlockedExams((prev) => {
+      const deduped = prev.filter((exam) => exam.id !== nextExam.id);
+      return [nextExam, ...deduped].slice(0, 4);
+    });
+    setLoading(false);
   };
 
   return (
     <div className="w-full">
-      <section className="w-full rounded-[16px] border border-[var(--color-hairline)] bg-white px-6 py-12 text-center airbnb-card-shadow">
-        <motion.p {...fadeIn} className="mb-2 text-[11px] font-bold tracking-[0.2em] text-[var(--color-rausch)] uppercase">
-          Student Gateway
-        </motion.p>
-        <motion.h1 {...fadeUp} className="text-[32px] md:text-[40px] font-display font-bold text-[var(--color-ink)] tracking-tight mb-3">
-          Enter assessment.
-        </motion.h1>
-        <motion.p
-          {...fadeUp}
-          transition={{ ...fadeUp.transition, delay: 0.1 }}
-          className="text-[15px] text-[var(--color-ash)] max-w-[550px] mx-auto mb-8 font-medium leading-relaxed"
-        >
-          Initialize your secure proctoring session by entering the 6-digit PIN provided by your instructor.
-        </motion.p>
-        
-        <motion.form
-          {...fadeIn}
-          transition={{ ...fadeIn.transition, delay: 0.25 }}
-          onSubmit={handleUnlock}
-          className="flex flex-col md:flex-row gap-3 items-center justify-center max-w-[440px] mx-auto w-full"
-        >
-           <motion.input
-             whileFocus={{ scale: 1.01, borderColor: '#ff385c' }}
-             transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-             type="text" 
-             placeholder="PIN CODE" 
-             value={pinCode}
-             onChange={(e) => setPinCode(e.target.value.toUpperCase())}
-             maxLength={6}
-             className="w-full bg-white border border-[var(--color-hairline)] rounded-[10px] px-4 py-3 text-[18px] font-mono font-bold tracking-[6px] text-center focus:outline-none focus:border-[var(--color-rausch)] shadow-sm text-[var(--color-ink)]"
-           />
-           <Button type="submit" variant="primary" disabled={loading} className="w-full md:w-auto px-8">
-             {loading ? 'Verifying...' : 'Unlock'}
-           </Button>
-        </motion.form>
-        <AnimatePresence>
-          <div className="mt-4">
-            <FeedbackBanner message={error} variant="error" />
-          </div>
-        </AnimatePresence>
-      </section>
+      <motion.div {...fadeUp} className="mb-7 flex flex-col gap-2">
+        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-rausch">Student Command Center</p>
+        <h1 className="text-section-heading tracking-tight text-ink">Assessment Access.</h1>
+        <p className="max-w-[720px] text-body-standard text-ash">
+          Unlock an exam with your PIN, verify readiness, and launch directly into your secure test environment.
+        </p>
+      </motion.div>
 
-      {/* Available Exams Section */}
-      <AnimatePresence>
-        {unlockedExam && (
-          <motion.section
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            className="w-full bg-white py-12 px-6 border-t border-[var(--color-hairline)]"
-          >
-            <div className="max-w-[600px] mx-auto">
-              <motion.h2
-                {...fadeUp}
-                className="text-[24px] font-display font-bold text-[var(--color-ink)] mb-8 text-center"
-              >
-                Assessment Ready.
-              </motion.h2>
-              
-              <Card elevated className="flex flex-col overflow-hidden bg-[var(--color-soft-cloud)] rounded-[16px]" delay={0.2}>
-                <div className="p-6">
-                  <span className="text-[11px] font-bold text-[var(--color-rausch)] uppercase tracking-wider mb-1 block">{unlockedExam.teacher_name}</span>
-                  <h3 className="text-[20px] font-display font-bold text-[var(--color-ink)] mb-4">{unlockedExam.exam_name}</h3>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-bold text-[var(--color-mute)] uppercase">Duration</span>
-                      <span className="text-[14px] font-bold text-[var(--color-ink)]">{unlockedExam.duration_minutes}m</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-bold text-[var(--color-mute)] uppercase">Questions</span>
-                      <span className="text-[14px] font-bold text-[var(--color-ink)]">{unlockedExam.total_questions}</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-bold text-[var(--color-mute)] uppercase">Deadline</span>
-                      <span className="text-[14px] font-bold text-[var(--color-ink)]">{new Date(unlockedExam.dead_date).toLocaleDateString()}</span>
-                    </div>
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.08fr_0.92fr]">
+        <div className="flex flex-col gap-6">
+          <Card elevated className="rounded-[12px] bg-white p-5 md:p-6" delay={0}>
+            <h2 className="text-card-title text-ink">Unlock Exam</h2>
+            <p className="mt-1 text-[12px] font-medium text-ash">
+              Enter the 6-character PIN shared by your instructor.
+            </p>
+
+            <form onSubmit={handleUnlock} className="mt-4 flex flex-col gap-3 md:flex-row md:items-center">
+              <input
+                type="text"
+                value={pinCode}
+                onChange={(e) => setPinCode(e.target.value.toUpperCase())}
+                placeholder="PIN CODE"
+                maxLength={6}
+                className="h-10 w-full rounded-[10px] border border-hairline bg-white px-4 text-center font-mono text-[16px] font-bold tracking-[5px] text-ink outline-none transition-colors focus:border-rausch"
+              />
+              <Button type="submit" variant="primary" disabled={loading} className="h-10 min-w-[130px]">
+                {loading ? 'Verifying...' : 'Unlock'}
+              </Button>
+            </form>
+
+            <div className="mt-3">
+              <FeedbackBanner message={error} variant="error" />
+            </div>
+          </Card>
+
+          <Card elevated className="rounded-[12px] bg-white p-5 md:p-6" delay={0.03}>
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h2 className="text-card-title text-ink">Active Exam</h2>
+              {activeStatus && (
+                <span
+                  className={`inline-flex h-6 items-center rounded-[999px] px-2.5 text-[10px] font-semibold uppercase tracking-wide ${
+                    activeStatus.state === 'live'
+                      ? 'bg-emerald-100 text-emerald-700'
+                      : activeStatus.state === 'upcoming'
+                        ? 'bg-amber-100 text-amber-700'
+                        : 'bg-red-100 text-red-700'
+                  }`}
+                >
+                  {activeStatus.label}
+                </span>
+              )}
+            </div>
+
+            {!unlockedExam ? (
+              <div className="rounded-[10px] border border-dashed border-hairline bg-soft-cloud/35 p-5 text-center">
+                <p className="text-[13px] font-medium text-ash">
+                  No exam unlocked yet. Enter a valid PIN to load assessment details.
+                </p>
+              </div>
+            ) : (
+              <motion.div {...fadeIn} className="rounded-[10px] border border-hairline bg-soft-cloud/40 p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-rausch">
+                  {unlockedExam.teacher_name}
+                </p>
+                <h3 className="mt-1 text-[19px] font-bold tracking-tight text-ink">{unlockedExam.exam_name}</h3>
+
+                <div className="mt-4 grid grid-cols-3 gap-3">
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-mute">Duration</p>
+                    <p className="text-[13px] font-semibold text-ink">{unlockedExam.duration_minutes}m</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-mute">Questions</p>
+                    <p className="text-[13px] font-semibold text-ink">{unlockedExam.total_questions}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-mute">Deadline</p>
+                    <p className="text-[13px] font-semibold text-ink">
+                      {new Date(unlockedExam.dead_date).toLocaleDateString()}
+                    </p>
                   </div>
                 </div>
-                <div className="p-6 bg-[var(--color-hairline)]/20 flex flex-col items-center border-t border-[var(--color-hairline)]">
-                   {isExamMissed(unlockedExam.dead_date) ? (
-                      <div className="w-full text-center">
-                         <Button variant="pill" disabled className="w-full opacity-50">Deadline Passed</Button>
-                      </div>
-                   ) : !isExamLive(unlockedExam.live_date, unlockedExam.dead_date) ? (
-                      <div className="w-full text-center">
-                         <Button variant="pill" disabled className="w-full opacity-50">Not Live Yet</Button>
-                         <p className="text-[11px] text-[var(--color-ash)] mt-2 font-bold">Opens: {new Date(unlockedExam.live_date).toLocaleString()}</p>
-                      </div>
-                   ) : (
-                      <Button 
-                        variant="primary" 
-                        onClick={() => router.push(`/student/test/${unlockedExam.id}`)}
-                        className="w-full max-w-[280px]"
-                      >
-                        Start Assessment
+
+                <div className="mt-4 border-t border-hairline pt-4">
+                  {activeStatus?.state === 'missed' ? (
+                    <Button variant="pill" disabled className="w-full opacity-55">
+                      Deadline Passed
+                    </Button>
+                  ) : activeStatus?.state === 'upcoming' ? (
+                    <div className="flex flex-col gap-2">
+                      <Button variant="pill" disabled className="w-full opacity-55">
+                        Not Live Yet
                       </Button>
-                   )}
+                      <p className="text-center text-[11px] font-semibold text-ash">
+                        Opens: {new Date(unlockedExam.live_date).toLocaleString()}
+                      </p>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="primary"
+                      className="w-full"
+                      onClick={() => router.push(`/student/test/${unlockedExam.id}`)}
+                    >
+                      Start Assessment
+                    </Button>
+                  )}
                 </div>
-              </Card>
-            </div>
-          </motion.section>
-        )}
-      </AnimatePresence>
+              </motion.div>
+            )}
+          </Card>
 
-      {/* Proctoring Pre-Warm */}
-      <section className="w-full bg-[var(--color-soft-cloud)] py-12 px-6 border-t border-[var(--color-hairline)]">
-        <div className="max-w-[800px] mx-auto text-center">
-          <motion.h2
-            {...fadeUp}
-            className="text-[20px] font-display font-bold text-[var(--color-ink)] mb-8"
-          >
-            Camera verification.
-          </motion.h2>
-          <motion.div
-            {...scaleIn}
-            className="flex justify-center"
-          >
-            <div className="w-full max-w-[500px] overflow-hidden rounded-[16px] border border-[var(--color-hairline)] bg-white p-2 airbnb-card-shadow">
-              <ProctorCamera />
-            </div>
-          </motion.div>
+          <Card elevated className="rounded-[12px] bg-white p-5 md:p-6" delay={0.06}>
+            <h2 className="text-card-title text-ink">Recently Unlocked</h2>
+            <p className="mt-1 text-[12px] font-medium text-ash">Quickly switch between exams unlocked in this session.</p>
+            {recentUnlockedExams.length === 0 ? (
+              <p className="mt-4 rounded-[10px] border border-dashed border-hairline bg-soft-cloud/35 p-4 text-[12px] font-medium text-ash">
+                No recent unlocks yet.
+              </p>
+            ) : (
+              <div className="mt-4 grid grid-cols-1 gap-2">
+                {recentUnlockedExams.map((exam) => {
+                  const status = getExamStatus(exam);
+                  return (
+                    <button
+                      type="button"
+                      key={exam.id}
+                      onClick={() => setUnlockedExam(exam)}
+                      className="flex items-center justify-between rounded-[9px] border border-hairline bg-soft-cloud/35 px-3 py-2 text-left transition-colors hover:border-rausch/40"
+                    >
+                      <div>
+                        <p className="text-[12px] font-semibold text-ink">{exam.exam_name}</p>
+                        <p className="text-[11px] text-ash">{exam.teacher_name}</p>
+                      </div>
+                      <span
+                        className={`rounded-[6px] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                          status.state === 'live'
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : status.state === 'upcoming'
+                              ? 'bg-amber-100 text-amber-700'
+                              : 'bg-red-100 text-red-700'
+                        }`}
+                      >
+                        {status.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </Card>
         </div>
-      </section>
 
+        <div className="flex flex-col gap-6">
+          <Card elevated className="rounded-[12px] bg-white p-5 md:p-6" delay={0.02}>
+            <h2 className="text-card-title text-ink">Readiness</h2>
+            <p className="mt-1 text-[12px] font-medium text-ash">
+              Confirm camera visibility and environment readiness before starting.
+            </p>
+            <div className="mt-4 grid grid-cols-1 gap-2">
+              <div className="rounded-[8px] border border-hairline bg-soft-cloud/35 px-3 py-2 text-[12px] font-medium text-ink">
+                Camera permissions required
+              </div>
+              <div className="rounded-[8px] border border-hairline bg-soft-cloud/35 px-3 py-2 text-[12px] font-medium text-ink">
+                Quiet and stable environment recommended
+              </div>
+              <div className="rounded-[8px] border border-hairline bg-soft-cloud/35 px-3 py-2 text-[12px] font-medium text-ink">
+                Fullscreen and anti-cheat checks during test
+              </div>
+            </div>
+          </Card>
+
+          <Card elevated className="rounded-[12px] bg-white p-4" delay={0.05}>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-card-title text-ink">Camera Widget</h2>
+              <span className="rounded-[6px] bg-blue-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-700">
+                Ready Check
+              </span>
+            </div>
+            <motion.div {...scaleIn} className="overflow-hidden rounded-[12px] border border-hairline bg-soft-cloud/30 p-2">
+              <ProctorCamera onStreamChange={setCameraStream} />
+            </motion.div>
+            <div className="mt-3">
+              <CameraDiagnostics stream={cameraStream} compact />
+            </div>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }

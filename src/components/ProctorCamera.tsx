@@ -10,9 +10,16 @@ interface ProctorCameraProps {
   height?: number;
   examId?: string;
   takeId?: string;
+  onStreamChange?: (stream: MediaStream | null) => void;
 }
 
-export default function ProctorCamera({ width = 640, height = 480, examId, takeId }: ProctorCameraProps) {
+export default function ProctorCamera({
+  width = 640,
+  height = 480,
+  examId,
+  takeId,
+  onStreamChange,
+}: ProctorCameraProps) {
     const supabase = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -36,22 +43,25 @@ export default function ProctorCamera({ width = 640, height = 480, examId, takeI
                     return;
                 }
                 streamRef.current = stream;
+                onStreamChange?.(stream);
                 if (videoRef.current) {
                     videoRef.current.srcObject = stream;
                     videoRef.current.onloadedmetadata = () => videoRef.current?.play();
                 }
             } catch {
                 setCameraError("Camera access denied.");
+                onStreamChange?.(null);
             }
         }
         startCamera();
         return () => {
             isCancelled = true;
+            onStreamChange?.(null);
             if (streamRef.current) {
                 streamRef.current.getTracks().forEach((t) => t.stop());
             }
         };
-    }, [videoRef]);
+    }, [videoRef, onStreamChange]);
 
     // Handle anomaly capture & background async upload to cheating_logs
     useEffect(() => {
