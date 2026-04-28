@@ -10,11 +10,14 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { TableToolbar } from '@/components/ui/TableToolbar';
 import { TableSearchInput } from '@/components/ui/TableSearchInput';
 import { TableFilterChips } from '@/components/ui/TableFilterChips';
+import { TakeReportDrawer } from '@/components/ui/TakeReportDrawer';
 import { useToast } from '@/components/ui/ToastProvider';
 import { useTableFilters } from '@/hooks/useTableFilters';
 import { PROCTORING_SNAPSHOTS_BUCKET } from '@/lib/proctoringLogs';
-import { fadeUp, scaleIn, overlayVariants, modalVariants, tableRowVariant, staggerContainer, staggerItem } from '@/lib/motion';
+import { fetchOrGenerateTakeReport } from '@/lib/takeReports';
+import { fadeUp, scaleIn, overlayVariants, modalVariants, tableRowVariant } from '@/lib/motion';
 import { normalizeErrorMessage } from '@/lib/errors';
+import type { TakeAiReport, TakeDrawerDetails, TakeDrawerSnapshot } from '@/types/takeReport';
 
 type TakeStatus = 'in_progress' | 'completed';
 type CodingGrade = 'passed' | 'failed' | 'pending';
@@ -75,7 +78,13 @@ interface Screenshot {
   storageMethod?: 'base64' | 'file+base64';
 }
 
-type SnapTab = 'camera' | 'browser';
+interface ActiveTakeReportState {
+  resultId: string;
+  studentName: string;
+  examName: string;
+  details: TakeDrawerDetails;
+  screenshots: Screenshot[];
+}
 
 function formatDateTime(value: string | null | undefined) {
   if (!value) return 'N/A';
@@ -178,6 +187,11 @@ function AnomalyIndicator({ counts }: { counts: ReturnType<typeof getAnomalyCoun
   );
 }
 
+function getCodingLabel(result: ResultRow, gradeLabels: Record<CodingGrade, string>) {
+  if (!result.coding_submissions || result.coding_submissions.length === 0) return 'No coding submission';
+  return gradeLabels[result.coding_grade || 'pending'];
+}
+
 export default function ResultsPage() {
   const { showToast } = useToast();
   const supabase = createBrowserClient(
@@ -191,13 +205,16 @@ export default function ResultsPage() {
   const [selectedCode, setSelectedCode] = useState<SelectedCodeState | null>(null);
   const [activeCodeTab, setActiveCodeTab] = useState<CodeInspectorTab>('overview');
   const [activeTestFilter, setActiveTestFilter] = useState<TestResultFilter>('all');
-  const [selectedScreenshots, setSelectedScreenshots] = useState<Screenshot[] | null>(null);
-  const [activeSnapTab, setActiveSnapTab] = useState<SnapTab>('camera');
   const [signedSnapshotUrls, setSignedSnapshotUrls] = useState<Record<string, string>>({});
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | TakeStatus>('all');
   const [visibilityFilter, setVisibilityFilter] = useState<'all' | 'published' | 'hidden'>('all');
   const [heatFilter, setHeatFilter] = useState<'all' | 'clean' | 'flagged'>('all');
+  const [activeTakeReport, setActiveTakeReport] = useState<ActiveTakeReportState | null>(null);
+  const [takeReport, setTakeReport] = useState<TakeAiReport | null>(null);
+  const [takeReportLoading, setTakeReportLoading] = useState(false);
+  const [takeReportRegenerating, setTakeReportRegenerating] = useState(false);
+  const [takeReportError, setTakeReportError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchResults();
@@ -274,6 +291,68 @@ export default function ResultsPage() {
     }
   };
 
+  const openTakeReport = async (result: ResultRow) => {
+    const counts = getAnomalyCounts(result.cheating_logs);
+    const screenshots = getAnomalyScreenshots(result.cheating_logs);
+    const endLabel = result.status === 'completed' ? formatDateTime(result.created_at) : 'In progress';
+    const durationLabel =
+      result.status === 'completed'
+        ? formatDuration(result.started_at, result.created_at)
+        : formatDuration(result.started_at, new Date().toISOString());
+
+    setActiveTakeReport({
+      resultId: result.id,
+      studentName: result.users?.name || 'Unknown Student',
+      examName: result.exams?.exam_name || 'Unknown Exam',
+      details: {
+        takeIdShort: result.id.slice(0, 8),
+        status: result.status,
+        startedAtLabel: formatDateTime(result.started_at || result.created_at),
+        endedAtLabel: endLabel,
+        durationLabel,
+        mcqScore: Number(result.mcq_score || 0),
+        codingLabel: getCodingLabel(result, gradeLabels),
+        anomalyTotal: counts.total,
+        noFaceCount: counts.noFace,
+        multipleFaceCount: counts.multipleFaces,
+        cellPhoneCount: counts.cellPhone,
+        prohibitedObjectCount: counts.prohibitedObject,
+        visibilityLabel: result.show_to_student ? 'Published' : 'Hidden',
+      },
+      screenshots,
+    });
+    setTakeReport(null);
+    setTakeReportError(null);
+    setTakeReportLoading(true);
+    try {
+      const response = await fetchOrGenerateTakeReport(result.id, false);
+      setTakeReport(response.report);
+    } catch (error) {
+      setTakeReportError(normalizeErrorMessage(error, 'Failed to load AI report.'));
+    } finally {
+      setTakeReportLoading(false);
+    }
+  };
+
+  const regenerateTakeReport = async () => {
+    if (!activeTakeReport) return;
+    setTakeReportError(null);
+    setTakeReportRegenerating(true);
+    try {
+      const response = await fetchOrGenerateTakeReport(activeTakeReport.resultId, true);
+      setTakeReport(response.report);
+      showToast({
+        variant: 'success',
+        title: 'AI report refreshed',
+        message: 'A new report summary was generated for this take.',
+      });
+    } catch (error) {
+      setTakeReportError(normalizeErrorMessage(error, 'Failed to regenerate AI report.'));
+    } finally {
+      setTakeReportRegenerating(false);
+    }
+  };
+
   const gradeColors: Record<CodingGrade, string> = {
     pending: 'bg-yellow-100 text-yellow-800',
     passed: 'bg-green-100 text-green-800',
@@ -316,14 +395,14 @@ export default function ResultsPage() {
     let cancelled = false;
 
     const resolveSignedUrls = async () => {
-      if (!selectedScreenshots || selectedScreenshots.length === 0) {
+      if (!activeTakeReport?.screenshots || activeTakeReport.screenshots.length === 0) {
         setSignedSnapshotUrls({});
         return;
       }
 
       const storagePaths = Array.from(
         new Set(
-          selectedScreenshots
+          activeTakeReport.screenshots
             .map((snapshot) => snapshot.storagePath)
             .filter((path): path is string => Boolean(path)),
         ),
@@ -356,7 +435,7 @@ export default function ResultsPage() {
     return () => {
       cancelled = true;
     };
-  }, [selectedScreenshots, supabase]);
+  }, [activeTakeReport, supabase]);
 
   const resolveSnapshotImageUrl = (snapshot: Screenshot) => {
     if (snapshot.storagePath && signedSnapshotUrls[snapshot.storagePath]) {
@@ -364,6 +443,14 @@ export default function ResultsPage() {
     }
     return snapshot.url;
   };
+
+  const drawerSnapshots: TakeDrawerSnapshot[] = (activeTakeReport?.screenshots || []).map((snapshot, index) => ({
+    id: `${snapshot.detectedAt}-${snapshot.type}-${index}`,
+    type: snapshot.type,
+    detectedAt: snapshot.detectedAt,
+    imageUrl: isBrowserEvent(snapshot.type) ? null : resolveSnapshotImageUrl(snapshot),
+    isBrowserEvent: isBrowserEvent(snapshot.type),
+  }));
 
   const activeSubmission = selectedCode
     ? selectedCode.submissions[selectedCode.activeSubmissionIndex] || null
@@ -447,10 +534,8 @@ export default function ResultsPage() {
                   <thead>
                     <tr className="border-b border-hairline bg-soft-cloud/30">
                       <th className="px-6 py-2.5 text-caption font-semibold uppercase tracking-wider text-ash">Student</th>
-                      <th className="px-6 py-2.5 text-caption font-semibold uppercase tracking-wider text-ash">Exam</th>
                       <th className="px-6 py-2.5 text-caption font-semibold uppercase tracking-wider text-ash">Status</th>
-                      <th className="px-6 py-2.5 text-caption font-semibold uppercase tracking-wider text-ash">Timing</th>
-                      <th className="px-6 py-2.5 text-caption font-semibold uppercase tracking-wider text-ash">Performance</th>
+                      <th className="px-6 py-2.5 text-caption font-semibold uppercase tracking-wider text-ash">Score</th>
                       <th className="px-6 py-2.5 text-caption font-semibold uppercase tracking-wider text-ash">Integrity</th>
                       <th className="px-6 py-2.5 text-right text-caption font-semibold uppercase tracking-wider text-ash">Actions</th>
                     </tr>
@@ -458,15 +543,15 @@ export default function ResultsPage() {
                   <tbody className="text-body-standard text-ink">
                     {loading ? (
                       <tr>
-                        <td colSpan={7} className="py-12 text-center text-ash">Loading results...</td>
+                        <td colSpan={5} className="py-12 text-center text-ash">Loading results...</td>
                       </tr>
                     ) : results.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="py-12 text-center text-ash">No exam takes found.</td>
+                        <td colSpan={5} className="py-12 text-center text-ash">No exam takes found.</td>
                       </tr>
                     ) : filteredResults.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="py-12 text-center text-ash">No takes match the current search and filters.</td>
+                        <td colSpan={5} className="py-12 text-center text-ash">No takes match the current search and filters.</td>
                       </tr>
                     ) : (
                       filteredResults.map((result, idx) => (
@@ -474,35 +559,26 @@ export default function ResultsPage() {
                           key={result.id}
                           {...tableRowVariant}
                           transition={{ ...tableRowVariant.transition, delay: idx * 0.03 }}
-                          className="border-b border-hairline transition-colors hover:bg-soft-cloud/45"
+                          className="cursor-pointer border-b border-hairline transition-colors hover:bg-soft-cloud/45"
+                          onClick={() => openTakeReport(result)}
                         >
                           <td className="px-6 py-2.5">
                             <div className="flex flex-col">
                               <span className="text-[14px] font-semibold">{result.users?.name || 'Unknown Student'}</span>
                               <span className="text-[12px] text-ash">{result.users?.email || 'No email'}</span>
-                              <span className="font-mono text-[11px] text-mute">Take #{result.id.slice(0, 8)}</span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-2.5 text-[14px] font-medium">{result.exams?.exam_name || 'Unknown Exam'}</td>
-                          <td className="px-6 py-2.5">
-                            <StatusBadge status={result.status} />
-                          </td>
-                          <td className="px-6 py-2.5">
-                            <div className="flex flex-col gap-0.5 text-[12px]">
-                              <span className="font-medium text-ink">Start {formatDateTime(result.started_at || result.created_at)}</span>
-                              <span className="text-ash">
-                                {result.status === 'completed'
-                                  ? `Duration ${formatDuration(result.started_at, result.created_at)}`
-                                  : `Live for ${formatDuration(result.started_at, new Date().toISOString())}`}
+                              <span className="text-[11px] font-medium text-mute">
+                                {(result.exams?.exam_name || 'Unknown Exam')} · #{result.id.slice(0, 8)}
                               </span>
                             </div>
                           </td>
                           <td className="px-6 py-2.5">
+                            <StatusBadge status={result.status} />
+                          </td>
+                          <td className="px-6 py-2.5">
                             <div className="flex items-center gap-2">
                               <span
-                                className={`rounded-[4px] px-2 py-1 text-[12px] font-semibold ${
-                                  result.mcq_score >= 50 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                }`}
+                                className={`rounded-[4px] px-2 py-1 text-[12px] font-semibold ${result.mcq_score >= 50 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                  }`}
                               >
                                 MCQ {result.mcq_score}%
                               </span>
@@ -522,21 +598,9 @@ export default function ResultsPage() {
                             <div className="flex items-center justify-end gap-2">
                               <Button
                                 variant="filter"
-                                className="min-w-[108px] text-[12px]"
-                                onClick={() => {
-                                  const shots = getAnomalyScreenshots(result.cheating_logs);
-                                  setSelectedScreenshots(shots);
-                                  const hasCameraSnaps = shots.some((snap) => !isBrowserEvent(snap.type));
-                                  setActiveSnapTab(hasCameraSnaps ? 'camera' : 'browser');
-                                }}
-                                disabled={getAnomalyScreenshots(result.cheating_logs).length === 0}
-                              >
-                                Snaps ({getAnomalyScreenshots(result.cheating_logs).length})
-                              </Button>
-                              <Button
-                                variant="filter"
-                                className="min-w-[120px] text-[12px]"
-                                onClick={() => {
+                                className="min-w-[104px] text-[12px]"
+                                onClick={(event) => {
+                                  event.stopPropagation();
                                   setActiveCodeTab('overview');
                                   setActiveTestFilter('all');
                                   setSelectedCode({
@@ -552,8 +616,11 @@ export default function ResultsPage() {
                               </Button>
                               <Button
                                 variant={result.show_to_student ? 'filter' : 'primary-blue'}
-                                className="min-w-[96px] text-[12px]"
-                                onClick={() => toggleVisibility(result.id, result.show_to_student)}
+                                className="min-w-[84px] text-[12px]"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  toggleVisibility(result.id, result.show_to_student);
+                                }}
                                 disabled={result.status !== 'completed'}
                               >
                                 {result.show_to_student ? 'Hide' : 'Publish'}
@@ -570,6 +637,28 @@ export default function ResultsPage() {
           </motion.div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {activeTakeReport && (
+          <TakeReportDrawer
+            open={Boolean(activeTakeReport)}
+            title="Details Panel"
+            subtitle={`${activeTakeReport.studentName} · ${activeTakeReport.examName} · #${activeTakeReport.resultId.slice(0, 8)}`}
+            details={activeTakeReport.details}
+            report={takeReport}
+            snapshots={drawerSnapshots}
+            loading={takeReportLoading}
+            error={takeReportError}
+            regenerating={takeReportRegenerating}
+            onClose={() => {
+              setActiveTakeReport(null);
+              setTakeReport(null);
+              setTakeReportError(null);
+            }}
+            onRegenerate={regenerateTakeReport}
+          />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {selectedCode && (
@@ -745,16 +834,14 @@ export default function ResultsPage() {
                         {filteredTestResults.map((testResult, index) => (
                           <div
                             key={`${testResult.label}-${index}`}
-                            className={`rounded-[10px] border bg-white p-3 ${
-                              testResult.passed ? 'border-emerald-200' : 'border-red-200'
-                            }`}
+                            className={`rounded-[10px] border bg-white p-3 ${testResult.passed ? 'border-emerald-200' : 'border-red-200'
+                              }`}
                           >
                             <div className="mb-2 flex items-center justify-between">
                               <span className="text-[12px] font-semibold text-ink">{testResult.label || `Test ${index + 1}`}</span>
                               <span
-                                className={`rounded-[6px] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
-                                  testResult.passed ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
-                                }`}
+                                className={`rounded-[6px] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${testResult.passed ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+                                  }`}
                               >
                                 {testResult.passed ? 'Passed' : 'Failed'}
                               </span>
@@ -827,109 +914,6 @@ export default function ResultsPage() {
         )}
       </AnimatePresence>
 
-      <AnimatePresence>
-        {selectedScreenshots !== null &&
-          (() => {
-            const cameraSnaps = selectedScreenshots.filter((snap) => !isBrowserEvent(snap.type));
-            const browserSnaps = selectedScreenshots.filter((snap) => isBrowserEvent(snap.type));
-
-            return (
-              <motion.div
-                {...overlayVariants}
-                className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-6 backdrop-blur-sm"
-                onClick={() => setSelectedScreenshots(null)}
-              >
-                <motion.div
-                  {...modalVariants}
-                  className="flex max-h-[85vh] w-full max-w-[800px] flex-col overflow-hidden rounded-[16px] bg-white shadow-2xl"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="border-b border-hairline p-6">
-                    <div className="mb-4 flex items-center justify-between">
-                      <h2 className="text-card-title tracking-tight text-ink">Detection Snaps</h2>
-                      <motion.button
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                        onClick={() => setSelectedScreenshots(null)}
-                        className="flex h-8 w-8 items-center justify-center rounded-full bg-soft-cloud text-ink transition-colors hover:bg-black/10"
-                      >
-                        ✕
-                      </motion.button>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant={activeSnapTab === 'camera' ? 'primary-blue' : 'filter'}
-                        className="min-w-[146px] text-[12px]"
-                        onClick={() => setActiveSnapTab('camera')}
-                      >
-                        Camera ({cameraSnaps.length})
-                      </Button>
-                      <Button
-                        variant={activeSnapTab === 'browser' ? 'primary-blue' : 'filter'}
-                        className="min-w-[146px] text-[12px]"
-                        onClick={() => setActiveSnapTab('browser')}
-                      >
-                        Browser ({browserSnaps.length})
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="h-full overflow-y-auto bg-soft-cloud p-6">
-                    {activeSnapTab === 'camera' ? (
-                      cameraSnaps.length === 0 ? (
-                        <p className="pt-12 text-center text-body-standard text-ash">No camera violation snapshots captured.</p>
-                      ) : (
-                        <motion.div
-                          variants={staggerContainer}
-                          initial="initial"
-                          animate="animate"
-                          className="grid grid-cols-1 gap-6 md:grid-cols-2"
-                        >
-                          {cameraSnaps.map((snap, i) => (
-                            <motion.div key={`camera-${i}`} variants={staggerItem} className="flex flex-col gap-2">
-                              <div className="relative aspect-video overflow-hidden rounded-[8px] bg-black/10 object-cover">
-                                <img src={resolveSnapshotImageUrl(snap)} alt={`Camera violation: ${snap.type}`} className="h-full w-full object-cover" />
-                              </div>
-                              <div className="flex items-center justify-between px-1">
-                                <span className="text-[12px] font-semibold uppercase tracking-wider text-red-500">{formatEventType(snap.type)}</span>
-                                <span className="font-mono text-[11px] text-ash">{new Date(snap.detectedAt).toLocaleTimeString()}</span>
-                              </div>
-                            </motion.div>
-                          ))}
-                        </motion.div>
-                      )
-                    ) : browserSnaps.length === 0 ? (
-                      <p className="pt-12 text-center text-body-standard text-ash">No browser event logs captured.</p>
-                    ) : (
-                      <motion.div variants={staggerContainer} initial="initial" animate="animate" className="flex flex-col gap-3">
-                        {browserSnaps.map((snap, i) => (
-                          <motion.div
-                            key={`browser-${i}`}
-                            variants={staggerItem}
-                            className="flex items-center justify-between rounded-[10px] border border-hairline bg-white px-4 py-3"
-                          >
-                            <div className="flex items-center gap-3">
-                              <span className="inline-flex h-7 items-center rounded-[999px] bg-slate-100 px-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-700">
-                                Browser
-                              </span>
-                              <span className="text-[13px] font-semibold text-ink">{formatEventType(snap.type)}</span>
-                              <span className="inline-flex h-6 items-center rounded-[999px] bg-amber-100 px-2 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
-                                Medium Risk
-                              </span>
-                            </div>
-                            <span className="font-mono text-[11px] text-ash">{new Date(snap.detectedAt).toLocaleTimeString()}</span>
-                          </motion.div>
-                        ))}
-                      </motion.div>
-                    )}
-                    {selectedScreenshots.length === 0 && (
-                      <p className="pt-12 text-center text-body-standard text-ash">No images captured during this session.</p>
-                    )}
-                  </div>
-                </motion.div>
-              </motion.div>
-            );
-          })()}
-      </AnimatePresence>
     </>
   );
 }
