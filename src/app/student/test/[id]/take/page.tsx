@@ -4,8 +4,10 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
 import { Button } from '@/components/ui/Button';
+import { FeedbackBanner } from '@/components/ui/FeedbackBanner';
 import ProctorCamera from '@/components/ProctorCamera';
 import { persistProctoringLog } from '@/lib/proctoringLogs';
+import { normalizeErrorMessage } from '@/lib/errors';
 
 // Monaco editor for code block execution
 import Editor from '@monaco-editor/react';
@@ -42,6 +44,10 @@ export default function ActiveExamPage() {
   const [timeLeft, setTimeLeft] = useState(0);
   const [takeId, setTakeId] = useState<string | null>(null);
   const initTakeStartedRef = useRef(false);
+  const [submissionFeedback, setSubmissionFeedback] = useState<{
+    variant: 'error' | 'warning' | 'success' | 'info';
+    message: string;
+  } | null>(null);
 
   useEffect(() => {
     if (!examId || initTakeStartedRef.current) return;
@@ -177,9 +183,14 @@ export default function ActiveExamPage() {
 
   const handleSubmit = async () => {
     setPhase('submitting');
+    setSubmissionFeedback(null);
     
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      setSubmissionFeedback({ variant: 'error', message: 'Authentication expired. Please sign in again.' });
+      setPhase('mcq');
+      return;
+    }
 
     // Build Payload
     const mcqScore = calculateMcqScore();
@@ -203,7 +214,10 @@ export default function ActiveExamPage() {
          details: submitErr.details,
          hint: submitErr.hint
        });
-       alert(`Error submitting exam: ${submitErr.message || 'Please try again.'}`);
+       setSubmissionFeedback({
+         variant: 'error',
+         message: `Error submitting exam: ${normalizeErrorMessage(submitErr, 'Please try again.')}`,
+       });
        setPhase('mcq');
        return;
     }
@@ -215,8 +229,12 @@ export default function ActiveExamPage() {
     });
 
     if (logErr) {
-       alert("Exam submitted, but proctoring analytics failed to sync. Please contact your teacher.");
+       setSubmissionFeedback({
+         variant: 'warning',
+         message: 'Exam submitted, but proctoring analytics failed to sync. Please contact your teacher.',
+       });
        console.error("Critical: Failed to save proctoring analytics", logErr);
+       setPhase('mcq');
        return;
     }
 
@@ -231,6 +249,14 @@ export default function ActiveExamPage() {
 
   return (
     <div className="min-h-screen bg-soft-cloud text-ink flex flex-col pt-[48px]">
+      <div className="fixed left-1/2 top-[54px] z-[205] w-[min(680px,calc(100vw-1.5rem))] -translate-x-1/2">
+        <FeedbackBanner
+          message={submissionFeedback?.message || null}
+          variant={submissionFeedback?.variant || 'info'}
+          compact
+          onDismiss={() => setSubmissionFeedback(null)}
+        />
+      </div>
       
       {/* Sticky Top Bar over the entire screen */}
       <div className="fixed top-0 left-0 right-0 h-[48px] bg-red-600 z-[100] flex justify-between items-center px-6 text-white overflow-hidden shadow-lg">

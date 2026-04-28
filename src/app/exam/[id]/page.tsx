@@ -4,9 +4,11 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
 import { Button } from '@/components/ui/Button';
+import { FeedbackBanner } from '@/components/ui/FeedbackBanner';
 import ProctorCamera from '@/components/ProctorCamera';
 import { useExamLockdown, LockdownViolation } from '@/hooks/useExamLockdown';
 import { persistProctoringLog } from '@/lib/proctoringLogs';
+import { normalizeErrorMessage } from '@/lib/errors';
 
 // Monaco editor for code block execution
 import Editor from '@monaco-editor/react';
@@ -46,6 +48,10 @@ export default function LockedExamPage() {
   const [browserViolations, setBrowserViolations] = useState<LockdownViolation[]>([]);
   const [takeId, setTakeId] = useState<string | null>(null);
   const initTakeStartedRef = useRef(false);
+  const [submissionFeedback, setSubmissionFeedback] = useState<{
+    variant: 'error' | 'warning' | 'success' | 'info';
+    message: string;
+  } | null>(null);
 
   const handleViolation = useCallback((v: LockdownViolation) => {
     setBrowserViolations(prev => [...prev, v]);
@@ -185,11 +191,16 @@ export default function LockedExamPage() {
 
   const handleSubmit = async () => {
     setPhase('submitting');
+    setSubmissionFeedback(null);
 
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      setSubmissionFeedback({ variant: 'error', message: 'Authentication expired. Please sign in again.' });
+      setPhase('mcq');
+      return;
+    }
 
     // ── Run test cases if they exist ──
     const mcqScore = calculateMcqScore();
@@ -256,7 +267,10 @@ export default function LockedExamPage() {
         details: submitErr.details,
         hint: submitErr.hint
       });
-      alert(`Error submitting exam: ${submitErr.message || 'Please try again.'}`);
+      setSubmissionFeedback({
+        variant: 'error',
+        message: `Error submitting exam: ${normalizeErrorMessage(submitErr, 'Please try again.')}`,
+      });
       setPhase('mcq');
       return;
     }
@@ -299,8 +313,12 @@ export default function LockedExamPage() {
       });
 
       if (logErr) {
-        alert('Exam submitted, but proctoring analytics failed to sync. Please contact your teacher.');
+        setSubmissionFeedback({
+          variant: 'warning',
+          message: 'Exam submitted, but proctoring analytics failed to sync. Please contact your teacher.',
+        });
         console.error('Critical: Failed to save proctoring analytics', logErr);
+        setPhase('mcq');
         return;
       }
     }
@@ -333,6 +351,14 @@ export default function LockedExamPage() {
     <div className="fixed inset-0 bg-[#0a0a0a] text-white flex flex-col overflow-hidden select-none"
          style={{ userSelect: 'none' }}
     >
+      <div className="fixed left-1/2 top-[54px] z-[205] w-[min(680px,calc(100vw-1.5rem))] -translate-x-1/2">
+        <FeedbackBanner
+          message={submissionFeedback?.message || null}
+          variant={submissionFeedback?.variant || 'info'}
+          compact
+          onDismiss={() => setSubmissionFeedback(null)}
+        />
+      </div>
       {/* ── Violation Warning Banner ── */}
       {showWarning && (
         <div className="fixed top-[48px] left-0 right-0 z-[200] flex justify-center pointer-events-none animate-pulse">

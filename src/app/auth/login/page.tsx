@@ -6,7 +6,9 @@ import Link from 'next/link';
 import { createBrowserClient } from '@supabase/ssr';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
+import { FeedbackBanner } from '@/components/ui/FeedbackBanner';
 import { fadeUp, fadeIn, scaleIn } from '@/lib/motion';
+import { normalizeErrorMessage } from '@/lib/errors';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -31,7 +33,7 @@ export default function LoginPage() {
     });
 
     if (error) {
-      setError(error.message);
+      setError(normalizeErrorMessage(error, 'Unable to sign in. Please try again.'));
       setLoading(false);
     } else if (user) {
       const role = user.user_metadata?.role || 'student';
@@ -59,15 +61,7 @@ export default function LoginPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.15, ease: [0.25, 0.46, 0.45, 0.94] as const }}
           >
-            {error && (
-              <motion.p
-                initial={{ opacity: 0, x: -5 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="text-center text-[var(--color-error)] text-[12px] font-bold"
-              >
-                {error}
-              </motion.p>
-            )}
+            <FeedbackBanner message={error} variant="error" />
 
             <div className="flex flex-col gap-3">
               <motion.input

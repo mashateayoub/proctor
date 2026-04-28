@@ -6,7 +6,10 @@ import { createBrowserClient } from '@supabase/ssr';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { FeedbackBanner } from '@/components/ui/FeedbackBanner';
 import { fadeUp, fadeIn } from '@/lib/motion';
+import { normalizeErrorMessage } from '@/lib/errors';
 
 interface Exam {
   id: string;
@@ -181,6 +184,8 @@ function AddQuestionsPageContent() {
   const [formError, setFormError] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [pendingDeleteQuestionId, setPendingDeleteQuestionId] = useState<string | null>(null);
+  const [deletingQuestion, setDeletingQuestion] = useState(false);
 
   const selectedExam = exams.find((exam) => exam.id === selectedExamId) || null;
 
@@ -335,11 +340,15 @@ function AddQuestionsPageContent() {
     setNotice(null);
   };
 
-  const handleDeleteQuestion = async (questionId: string) => {
-    if (!selectedExamId) return;
-    const confirmed = window.confirm('Delete this question from the bank?');
-    if (!confirmed) return;
+  const requestDeleteQuestion = (questionId: string) => {
+    setPendingDeleteQuestionId(questionId);
+  };
 
+  const handleDeleteQuestion = async () => {
+    if (!selectedExamId) return;
+    if (!pendingDeleteQuestionId) return;
+
+    setDeletingQuestion(true);
     setFormError(null);
     setImportError(null);
     setNotice(null);
@@ -347,19 +356,23 @@ function AddQuestionsPageContent() {
     const { error } = await supabase
       .from('questions')
       .delete()
-      .eq('id', questionId);
+      .eq('id', pendingDeleteQuestionId);
 
     if (error) {
-      setFormError(error.message);
+      setFormError(normalizeErrorMessage(error, 'Failed to delete question.'));
+      setDeletingQuestion(false);
+      setPendingDeleteQuestionId(null);
       return;
     }
 
     await loadQuestions(selectedExamId);
     setNotice('Question deleted.');
 
-    if (editingQuestionId === questionId) {
+    if (editingQuestionId === pendingDeleteQuestionId) {
       resetForm();
     }
+    setDeletingQuestion(false);
+    setPendingDeleteQuestionId(null);
   };
 
   const handleSubmitQuestion = async (e: React.FormEvent) => {
@@ -409,7 +422,7 @@ function AddQuestionsPageContent() {
 
     if (error) {
       setSubmitting(false);
-      setFormError(error.message);
+      setFormError(normalizeErrorMessage(error, 'Failed to save question.'));
       return;
     }
 
@@ -449,7 +462,7 @@ function AddQuestionsPageContent() {
 
     if (error) {
       setImporting(false);
-      setImportError(error.message);
+      setImportError(normalizeErrorMessage(error, 'Failed to import JSON.'));
       return;
     }
 
@@ -569,7 +582,7 @@ function AddQuestionsPageContent() {
                           <Button variant="filter" size="xs" onClick={() => handleEditQuestion(question)}>
                             Edit
                           </Button>
-                          <Button variant="danger" size="xs" onClick={() => handleDeleteQuestion(question.id)}>
+                          <Button variant="danger" size="xs" onClick={() => requestDeleteQuestion(question.id)}>
                             Delete
                           </Button>
                         </div>
@@ -604,16 +617,8 @@ function AddQuestionsPageContent() {
                     : 'Create a new MCQ with exactly one correct answer.'}
                 </p>
                 <div aria-live="polite" className="mb-4 space-y-2">
-                  {formError && (
-                    <p className="rounded-[8px] border border-red-200 bg-red-50 px-3 py-2 text-[12px] font-semibold text-red-600">
-                      {formError}
-                    </p>
-                  )}
-                  {notice && (
-                    <p className="rounded-[8px] border border-emerald-200 bg-emerald-50 px-3 py-2 text-[12px] font-semibold text-emerald-700">
-                      {notice}
-                    </p>
-                  )}
+                  <FeedbackBanner message={formError} variant="error" />
+                  <FeedbackBanner message={notice} variant="success" />
                 </div>
 
                 <form className="flex flex-col gap-5" onSubmit={handleSubmitQuestion}>
@@ -679,11 +684,7 @@ function AddQuestionsPageContent() {
                   Expected shape: array of objects with `question_text` and 4 `options` containing `optionText` + `isCorrect`.
                 </p>
                 <div aria-live="polite" className="mb-4 space-y-2">
-                  {importError && (
-                    <p className="rounded-[8px] border border-red-200 bg-red-50 px-3 py-2 text-[12px] font-semibold text-red-600">
-                      {importError}
-                    </p>
-                  )}
+                  <FeedbackBanner message={importError} variant="error" />
                 </div>
                 <textarea
                   rows={8}
@@ -717,6 +718,18 @@ function AddQuestionsPageContent() {
           </Button>
         </motion.div>
       </div>
+      <ConfirmDialog
+        open={pendingDeleteQuestionId !== null}
+        title="Delete this question?"
+        description="This question will be permanently removed from the exam bank."
+        confirmLabel="Delete question"
+        intent="danger"
+        loading={deletingQuestion}
+        onCancel={() => {
+          if (!deletingQuestion) setPendingDeleteQuestionId(null);
+        }}
+        onConfirm={handleDeleteQuestion}
+      />
     </div>
   );
 }

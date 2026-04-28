@@ -6,7 +6,11 @@ import { createBrowserClient } from '@supabase/ssr';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { FeedbackBanner } from '@/components/ui/FeedbackBanner';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { useToast } from '@/components/ui/ToastProvider';
 import { fadeUp, fadeIn, scaleIn, staggerContainer, staggerItem } from '@/lib/motion';
+import { normalizeErrorMessage } from '@/lib/errors';
 
 interface Exam {
   id: string;
@@ -20,6 +24,7 @@ interface Exam {
 
 export default function ExamManagementPage() {
   const router = useRouter();
+  const { showToast } = useToast();
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -27,6 +32,9 @@ export default function ExamManagementPage() {
 
   const [exams, setExams] = useState<Exam[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [pendingDeleteExamId, setPendingDeleteExamId] = useState<string | null>(null);
+  const [deletingExamId, setDeletingExamId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchExams();
@@ -35,8 +43,13 @@ export default function ExamManagementPage() {
 
   const fetchExams = async () => {
     setLoading(true);
+    setError(null);
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      setError('You must be authenticated to view exams.');
+      return;
+    }
 
     const { data, error } = await supabase
       .from('exams')
@@ -46,22 +59,37 @@ export default function ExamManagementPage() {
 
     if (data && !error) {
       setExams(data);
+    } else if (error) {
+      setError(normalizeErrorMessage(error, 'Failed to load exams.'));
     }
     setLoading(false);
   };
 
-  const handleDelete = async (id: string) => {
-    const confirmation = window.confirm("Are you sure you want to delete this exam? This will cascade and destroy all associated questions and student result data.");
-    if (!confirmation) return;
+  const requestDelete = (id: string) => {
+    setPendingDeleteExamId(id);
+  };
+
+  const handleDelete = async () => {
+    if (!pendingDeleteExamId) return;
+    setDeletingExamId(pendingDeleteExamId);
 
     const { error } = await supabase
       .from('exams')
       .delete()
-      .eq('id', id);
+      .eq('id', pendingDeleteExamId);
 
     if (!error) {
-      setExams(exams.filter(exam => exam.id !== id));
+      setExams((prev) => prev.filter((exam) => exam.id !== pendingDeleteExamId));
+      showToast({ variant: 'success', title: 'Exam deleted', message: 'Assessment has been removed.' });
+    } else {
+      showToast({
+        variant: 'error',
+        title: 'Delete failed',
+        message: normalizeErrorMessage(error, 'Failed to delete exam.'),
+      });
     }
+    setDeletingExamId(null);
+    setPendingDeleteExamId(null);
   };
 
   return (
@@ -77,6 +105,9 @@ export default function ExamManagementPage() {
                New Assessment
              </Button>
           </motion.div>
+          <div className="mb-4">
+            <FeedbackBanner message={error} variant="error" />
+          </div>
 
           {loading ? (
             <motion.p {...fadeIn} className="text-center text-[13px] text-[var(--color-ash)] font-medium mt-20">Accessing registry...</motion.p>
@@ -138,7 +169,11 @@ export default function ExamManagementPage() {
                         </div>
                         
                         <div className="p-4 bg-[var(--color-soft-cloud)]/40 flex justify-between items-center border-t border-[var(--color-hairline)]">
-                          <Button variant="secondary" className="text-[var(--color-error)] border-[var(--color-error)]/20 hover:bg-red-50 px-4" onClick={() => handleDelete(exam.id)}>
+                          <Button
+                            variant="secondary"
+                            className="text-[var(--color-error)] border-[var(--color-error)]/20 hover:bg-red-50 px-4"
+                            onClick={() => requestDelete(exam.id)}
+                          >
                             Delete
                           </Button>
                           <Button variant="pill" className="px-4" onClick={() => router.push(`/teacher/add-questions?exam=${exam.id}`)}>
@@ -154,6 +189,18 @@ export default function ExamManagementPage() {
           )}
 
         </div>
+        <ConfirmDialog
+          open={pendingDeleteExamId !== null}
+          title="Delete this exam?"
+          description="This will permanently remove the exam, all questions, and all associated student results."
+          confirmLabel="Delete exam"
+          intent="danger"
+          loading={deletingExamId !== null}
+          onCancel={() => {
+            if (!deletingExamId) setPendingDeleteExamId(null);
+          }}
+          onConfirm={handleDelete}
+        />
     </div>
   );
 }

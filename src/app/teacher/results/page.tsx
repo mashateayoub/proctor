@@ -5,13 +5,16 @@ import { createBrowserClient } from '@supabase/ssr';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { FeedbackBanner } from '@/components/ui/FeedbackBanner';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { TableToolbar } from '@/components/ui/TableToolbar';
 import { TableSearchInput } from '@/components/ui/TableSearchInput';
 import { TableFilterChips } from '@/components/ui/TableFilterChips';
+import { useToast } from '@/components/ui/ToastProvider';
 import { useTableFilters } from '@/hooks/useTableFilters';
 import { PROCTORING_SNAPSHOTS_BUCKET } from '@/lib/proctoringLogs';
 import { fadeUp, scaleIn, overlayVariants, modalVariants, tableRowVariant, staggerContainer, staggerItem } from '@/lib/motion';
+import { normalizeErrorMessage } from '@/lib/errors';
 
 type TakeStatus = 'in_progress' | 'completed';
 type CodingGrade = 'passed' | 'failed' | 'pending';
@@ -150,6 +153,7 @@ function AnomalyIndicator({ counts }: { counts: ReturnType<typeof getAnomalyCoun
 }
 
 export default function ResultsPage() {
+  const { showToast } = useToast();
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -157,6 +161,7 @@ export default function ResultsPage() {
 
   const [results, setResults] = useState<ResultRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pageError, setPageError] = useState<string | null>(null);
   const [selectedCode, setSelectedCode] = useState<SelectedCodeState | null>(null);
   const [selectedScreenshots, setSelectedScreenshots] = useState<Screenshot[] | null>(null);
   const [activeSnapTab, setActiveSnapTab] = useState<SnapTab>('camera');
@@ -173,6 +178,7 @@ export default function ResultsPage() {
 
   const fetchResults = async () => {
     setLoading(true);
+    setPageError(null);
     const { data, error } = await supabase
       .from('results')
       .select(`
@@ -188,6 +194,7 @@ export default function ResultsPage() {
     } else {
       console.error('Failed to load results', error);
       setResults([]);
+      setPageError(normalizeErrorMessage(error, 'Failed to load results.'));
     }
     setLoading(false);
   };
@@ -200,6 +207,17 @@ export default function ResultsPage() {
 
     if (!error) {
       setResults(results.map((r) => (r.id === id ? { ...r, show_to_student: !currentStatus } : r)));
+      showToast({
+        variant: 'success',
+        title: 'Visibility updated',
+        message: !currentStatus ? 'Result has been published to the student.' : 'Result has been hidden.',
+      });
+    } else {
+      showToast({
+        variant: 'error',
+        title: 'Update failed',
+        message: normalizeErrorMessage(error, 'Failed to update visibility.'),
+      });
     }
   };
 
@@ -214,6 +232,17 @@ export default function ResultsPage() {
       if (selectedCode && selectedCode.resultId === resultId) {
         setSelectedCode({ ...selectedCode, currentGrade: grade });
       }
+      showToast({
+        variant: 'success',
+        title: 'Grade updated',
+        message: `Coding grade set to ${gradeLabels[grade]}.`,
+      });
+    } else {
+      showToast({
+        variant: 'error',
+        title: 'Grade update failed',
+        message: normalizeErrorMessage(error, 'Failed to update coding grade.'),
+      });
     }
   };
 
@@ -318,6 +347,9 @@ export default function ResultsPage() {
               Review every take in one compact console: grading, integrity heat, and violation snapshots.
             </p>
           </motion.div>
+          <div className="mb-4">
+            <FeedbackBanner message={pageError} variant="error" />
+          </div>
 
           <motion.div {...scaleIn} transition={{ ...scaleIn.transition, delay: 0.1 }}>
             <Card elevated className="overflow-hidden bg-white">

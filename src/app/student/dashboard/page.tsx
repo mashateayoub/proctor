@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { FeedbackBanner } from '@/components/ui/FeedbackBanner';
 import ProctorCamera from '@/components/ProctorCamera';
 import { fadeUp, fadeIn, scaleIn } from '@/lib/motion';
 
@@ -108,16 +109,9 @@ export default function StudentDashboard() {
            </Button>
         </motion.form>
         <AnimatePresence>
-          {error && (
-            <motion.p
-              initial={{ opacity: 0, y: -5 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -5 }}
-              className="text-[var(--color-error)] font-bold mt-4 text-[13px]"
-            >
-              {error}
-            </motion.p>
-          )}
+          <div className="mt-4">
+            <FeedbackBanner message={error} variant="error" />
+          </div>
         </AnimatePresence>
       </section>
 

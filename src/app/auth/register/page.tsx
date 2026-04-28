@@ -6,7 +6,9 @@ import Link from 'next/link';
 import { createBrowserClient } from '@supabase/ssr';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
+import { FeedbackBanner } from '@/components/ui/FeedbackBanner';
 import { fadeUp, fadeIn, scaleIn } from '@/lib/motion';
+import { normalizeErrorMessage } from '@/lib/errors';
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
@@ -39,7 +41,7 @@ export default function RegisterPage() {
     });
 
     if (error) {
-      setError(error.message);
+      setError(normalizeErrorMessage(error, 'Unable to register right now.'));
       setLoading(false);
     } else {
       router.push(role === 'teacher' ? '/teacher/dashboard' : '/student/dashboard');
@@ -66,16 +68,7 @@ export default function RegisterPage() {
             transition={{ duration: 0.4, delay: 0.15, ease: [0.25, 0.46, 0.45, 0.94] as const }}
           >
             <AnimatePresence mode="wait">
-              {error && (
-                <motion.p
-                  initial={{ opacity: 0, x: -5 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -5 }}
-                  className="text-center text-[var(--color-error)] text-[12px] font-bold"
-                >
-                  {error}
-                </motion.p>
-              )}
+              <FeedbackBanner message={error} variant="error" />
             </AnimatePresence>
 
             <div className="flex flex-col gap-3">

@@ -6,7 +6,10 @@ import { createBrowserClient } from '@supabase/ssr';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { FeedbackBanner } from '@/components/ui/FeedbackBanner';
+import { useToast } from '@/components/ui/ToastProvider';
 import { fadeUp, fadeIn, scaleIn, staggerContainer, staggerItem } from '@/lib/motion';
+import { normalizeErrorMessage } from '@/lib/errors';
 
 interface TestCase {
   label: string;
@@ -16,6 +19,7 @@ interface TestCase {
 
 export default function CreateExamPage() {
   const router = useRouter();
+  const { showToast } = useToast();
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -83,7 +87,7 @@ export default function CreateExamPage() {
 
     if (examError || !exam) {
       console.error(examError);
-      setError("Failed to create Exam setup.");
+      setError(normalizeErrorMessage(examError, 'Failed to create exam setup.'));
       setLoading(false);
       return;
     }
@@ -101,10 +105,20 @@ export default function CreateExamPage() {
       
       if (codeError) {
          console.error("Failed to append coding question", codeError);
+         showToast({
+           variant: 'warning',
+           title: 'Exam created',
+           message: 'Coding question could not be attached. You can add it later.',
+         });
       }
     }
 
     setLoading(false);
+    showToast({
+      variant: 'success',
+      title: 'Exam created',
+      message: 'Assessment has been created successfully.',
+    });
     router.push('/teacher/dashboard');
   };
 
@@ -126,16 +140,7 @@ export default function CreateExamPage() {
             transition={{ duration: 0.4, delay: 0.1, ease: [0.25, 0.46, 0.45, 0.94] as const }}
           >
             <AnimatePresence mode="wait">
-              {error && (
-                <motion.p
-                  initial={{ opacity: 0, y: -5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -5 }}
-                  className="text-center text-[var(--color-error)] text-[12px] font-bold"
-                >
-                  {error}
-                </motion.p>
-              )}
+              <FeedbackBanner message={error} variant="error" />
             </AnimatePresence>
             
             {/* Base Meta Settings */}
