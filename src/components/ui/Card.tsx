@@ -18,9 +18,10 @@ export function Card({ children, className = '', elevated = false, delay = 0 }: 
 
   return (
     <motion.div
-      initial={scaleIn.initial}
-      animate={scaleIn.animate}
-      transition={{ ...scaleIn.transition, delay }}
+      variants={scaleIn}
+      initial="initial"
+      animate="animate"
+      transition={{ delay }}
       className={`overflow-hidden rounded-[16px] border border-[var(--color-hairline)] bg-white text-[var(--color-ink)] ${elevationStyles} ${className}`}
     >
       {children}
