@@ -12,11 +12,64 @@ import { fadeUp, fadeIn } from '@/lib/motion';
 import { normalizeErrorMessage } from '@/lib/errors';
 
 type StepId = 'details' | 'coding' | 'tests' | 'review';
+type RunnerLanguage = 'javascript' | 'python' | 'java' | 'go' | 'rust' | 'c' | 'cpp' | 'bash';
 
 interface TestCase {
   label: string;
   input: string;
   expectedOutput: string;
+}
+
+type StarterTemplates = Record<RunnerLanguage, string>;
+
+const languageOptions: RunnerLanguage[] = [
+  'javascript',
+  'python',
+  'java',
+  'go',
+  'rust',
+  'c',
+  'cpp',
+  'bash',
+];
+
+const defaultTemplates: StarterTemplates = {
+  javascript: '',
+  python: '',
+  java: '',
+  go: '',
+  rust: '',
+  c: '',
+  cpp: '',
+  bash: '',
+};
+
+function toCamelCaseFunctionName(input: string) {
+  const cleaned = input
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (cleaned.length === 0) return 'solve';
+
+  const [first, ...rest] = cleaned;
+  const base = first + rest.map((token) => token.charAt(0).toUpperCase() + token.slice(1)).join('');
+  return /^[a-z]/.test(base) ? base : `solve${base.charAt(0).toUpperCase()}${base.slice(1)}`;
+}
+
+function buildStarterTemplates(functionName: string): StarterTemplates {
+  return {
+    javascript: `function ${functionName}(input) {\n    // TODO: implement\n    return '';\n}\n\nconst fs = require('fs');\nconst data = fs.readFileSync(0, 'utf8').trim();\nconst result = ${functionName}(data);\nif (result !== undefined && result !== null) {\n    console.log(String(result));\n}\n`,
+    python: `import sys\n\n\ndef ${functionName}(input_data: str) -> str:\n    # TODO: implement\n    return ''\n\n\ndef main() -> None:\n    data = sys.stdin.read().strip()\n    result = ${functionName}(data)\n    if result is not None:\n        print(str(result))\n\n\nif __name__ == '__main__':\n    main()\n`,
+    java: `import java.io.*;\n\npublic class Main {\n    static String ${functionName}(String input) {\n        // TODO: implement\n        return \"\";\n    }\n\n    public static void main(String[] args) throws Exception {\n        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));\n        StringBuilder sb = new StringBuilder();\n        String line;\n        while ((line = br.readLine()) != null) {\n            if (sb.length() > 0) sb.append(\"\\n\");\n            sb.append(line);\n        }\n        String result = ${functionName}(sb.toString().trim());\n        if (result != null) {\n            System.out.println(result);\n        }\n    }\n}\n`,
+    go: `package main\n\nimport (\n    \"fmt\"\n    \"io\"\n    \"os\"\n    \"strings\"\n)\n\nfunc ${functionName}(input string) string {\n    // TODO: implement\n    return \"\"\n}\n\nfunc main() {\n    bytes, _ := io.ReadAll(os.Stdin)\n    data := strings.TrimSpace(string(bytes))\n    result := ${functionName}(data)\n    fmt.Println(result)\n}\n`,
+    rust: `use std::io::{self, Read};\n\nfn ${functionName}(input: &str) -> String {\n    // TODO: implement\n    String::new()\n}\n\nfn main() {\n    let mut input = String::new();\n    io::stdin().read_to_string(&mut input).unwrap();\n    let data = input.trim();\n    let result = ${functionName}(data);\n    println!(\"{}\", result);\n}\n`,
+    c: `#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n\nchar* ${functionName}(const char* input) {\n    // TODO: implement\n    char* out = malloc(1);\n    out[0] = '\\0';\n    return out;\n}\n\nint main(void) {\n    char buffer[8192];\n    size_t n = fread(buffer, 1, sizeof(buffer) - 1, stdin);\n    buffer[n] = '\\0';\n\n    while (n > 0 && (buffer[n - 1] == '\\n' || buffer[n - 1] == '\\r' || buffer[n - 1] == ' ' || buffer[n - 1] == '\\t')) {\n        buffer[--n] = '\\0';\n    }\n\n    char* result = ${functionName}(buffer);\n    if (result != NULL) {\n        printf(\"%s\\n\", result);\n        free(result);\n    }\n    return 0;\n}\n`,
+    cpp: `#include <bits/stdc++.h>\nusing namespace std;\n\nstring ${functionName}(const string& input) {\n    // TODO: implement\n    return \"\";\n}\n\nint main() {\n    ios::sync_with_stdio(false);\n    cin.tie(nullptr);\n\n    string input((istreambuf_iterator<char>(cin)), istreambuf_iterator<char>());\n    while (!input.empty() && (input.back() == '\\n' || input.back() == '\\r' || input.back() == ' ' || input.back() == '\\t')) {\n        input.pop_back();\n    }\n\n    cout << ${functionName}(input) << \"\\n\";\n    return 0;\n}\n`,
+    bash: `${functionName}() {\n    local input=\"$1\"\n    # TODO: implement\n    printf \"%s\" \"\"\n}\n\ninput=\"$(cat)\"\ninput=\"$(printf '%s' \"$input\" | sed -e :a -e '/^[[:space:]]*$/{$d;N;ba' -e '}' -e 's/[[:space:]]*$//')\"\nresult=\"$( ${functionName} \"$input\" )\"\nprintf '%s\\n' \"$result\"\n`,
+  };
 }
 
 const steps: { id: StepId; label: string }[] = [
@@ -70,6 +123,11 @@ export default function CreateExamPage() {
     question_text: '',
     description: '',
   });
+  const [templateFunctionName, setTemplateFunctionName] = useState('solve');
+  const [starterTemplates, setStarterTemplates] = useState<StarterTemplates>(defaultTemplates);
+  const [templatePreviewLanguage, setTemplatePreviewLanguage] = useState<RunnerLanguage>('javascript');
+  const [testCasesVerified, setTestCasesVerified] = useState(false);
+  const [testCasesVerificationSummary, setTestCasesVerificationSummary] = useState<string | null>(null);
 
   const [testCases, setTestCases] = useState<TestCase[]>([]);
 
@@ -93,15 +151,74 @@ export default function CreateExamPage() {
   }, [examData, scheduleStatus.tone]);
 
   const addTestCase = () => {
+    setTestCasesVerified(false);
+    setTestCasesVerificationSummary(null);
     setTestCases((prev) => [...prev, { label: '', input: '', expectedOutput: '' }]);
   };
 
   const removeTestCase = (idx: number) => {
+    setTestCasesVerified(false);
+    setTestCasesVerificationSummary(null);
     setTestCases((prev) => prev.filter((_, i) => i !== idx));
   };
 
   const updateTestCase = (idx: number, field: keyof TestCase, value: string) => {
+    setTestCasesVerified(false);
+    setTestCasesVerificationSummary(null);
     setTestCases((prev) => prev.map((tc, i) => (i === idx ? { ...tc, [field]: value } : tc)));
+  };
+
+  const generateStarterTemplates = () => {
+    const functionName = toCamelCaseFunctionName(codingQuestion.question_text || codingQuestion.description || 'solve');
+    setTemplateFunctionName(functionName);
+    setStarterTemplates(buildStarterTemplates(functionName));
+  };
+
+  const verifyTestCasesTransport = async () => {
+    const validCases = testCases.filter((tc) => tc.input.trim() && tc.expectedOutput.trim());
+    if (validCases.length === 0) {
+      setTestCasesVerified(false);
+      setTestCasesVerificationSummary('Add at least one complete test case first.');
+      return;
+    }
+
+    setLoading(true);
+    setTestCasesVerificationSummary(null);
+    try {
+      const transportCases = validCases.map((tc, index) => ({
+        label: tc.label?.trim() || `case_${index + 1}`,
+        input: tc.input,
+        expectedOutput: tc.input.trim(),
+      }));
+      const response = await fetch('/api/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          language: 'python',
+          code: 'import sys\nprint(sys.stdin.read().strip())',
+          testCases: transportCases,
+        }),
+      });
+      const data = await response.json();
+      const passed = Number(data?.passedCount || 0);
+      const total = Number(data?.totalCount || 0);
+      const hasInfraError = Boolean(data?.error) || (data?.errorType && data.errorType !== 'none');
+
+      if (!hasInfraError && total > 0 && passed === total) {
+        setTestCasesVerified(true);
+        setTestCasesVerificationSummary(`Verified stdin/stdout transport on ${passed}/${total} cases.`);
+      } else {
+        setTestCasesVerified(false);
+        setTestCasesVerificationSummary(
+          data?.output || data?.error || `Verification failed (${passed}/${total}). Check formatting of inputs/outputs.`,
+        );
+      }
+    } catch {
+      setTestCasesVerified(false);
+      setTestCasesVerificationSummary('Could not verify test cases: execution engine unreachable.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const validateDetailsStep = () => {
@@ -192,8 +309,22 @@ export default function CreateExamPage() {
     }
 
     if (codingEnabled) {
+      if (!starterTemplates.javascript.trim()) {
+        setError('Generate starter templates before publishing this coding exercise.');
+        setLoading(false);
+        setCurrentStep('coding');
+        return;
+      }
+
       if (hasIncompleteCases) {
         setError('Each test case must include both stdin input and expected stdout.');
+        setLoading(false);
+        setCurrentStep('tests');
+        return;
+      }
+
+      if (testCases.filter((tc) => tc.input.trim() && tc.expectedOutput.trim()).length > 0 && !testCasesVerified) {
+        setError('Run and pass test-case stdin/stdout verification before publishing.');
         setLoading(false);
         setCurrentStep('tests');
         return;
@@ -205,6 +336,8 @@ export default function CreateExamPage() {
           exam_id: exam.id,
           question_text: codingQuestion.question_text.trim(),
           description: codingQuestion.description.trim(),
+          template_function_name: templateFunctionName.trim(),
+          starter_templates: starterTemplates,
           test_cases: testCases.filter((tc) => tc.input.trim() && tc.expectedOutput.trim()),
         });
 
@@ -392,6 +525,62 @@ export default function CreateExamPage() {
                       }
                     />
                   </div>
+                  {codingEnabled && (
+                    <div className="rounded-[10px] border border-hairline bg-soft-cloud/40 p-3">
+                      <div className="flex flex-col gap-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-[11px] font-semibold uppercase tracking-wider text-mute">
+                            LeetCode-Style Starter Templates
+                          </p>
+                          <Button type="button" variant="secondary" onClick={generateStarterTemplates}>
+                            Generate Templates
+                          </Button>
+                        </div>
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                          <div>
+                            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-ash">
+                              Function Name
+                            </label>
+                            <input
+                              type="text"
+                              className={inputStyles}
+                              value={templateFunctionName}
+                              onChange={(e) => {
+                                const nextName = e.target.value.trim() || 'solve';
+                                setTemplateFunctionName(nextName);
+                                setStarterTemplates(buildStarterTemplates(nextName));
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-ash">
+                              Preview Language
+                            </label>
+                            <select
+                              className={inputStyles}
+                              value={templatePreviewLanguage}
+                              onChange={(e) => setTemplatePreviewLanguage(e.target.value as RunnerLanguage)}
+                            >
+                              {languageOptions.map((lang) => (
+                                <option key={lang} value={lang}>{lang}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-ash">
+                            Generated Starter
+                          </label>
+                          <textarea
+                            rows={10}
+                            className={areaStyles}
+                            value={starterTemplates[templatePreviewLanguage]}
+                            readOnly
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -421,6 +610,23 @@ export default function CreateExamPage() {
                     <FeedbackBanner
                       message="Some test cases are incomplete. Fill both Input and Expected Output for each case."
                       variant="warning"
+                      compact
+                    />
+                  )}
+                  {codingEnabled && (
+                    <div className="flex items-center gap-2">
+                      <Button type="button" variant="secondary" onClick={verifyTestCasesTransport} disabled={loading}>
+                        Verify stdin/stdout
+                      </Button>
+                      <span className={`text-[11px] font-semibold ${testCasesVerified ? 'text-emerald-600' : 'text-ash'}`}>
+                        {testCasesVerified ? 'Verified' : 'Not verified'}
+                      </span>
+                    </div>
+                  )}
+                  {testCasesVerificationSummary && (
+                    <FeedbackBanner
+                      message={testCasesVerificationSummary}
+                      variant={testCasesVerified ? 'success' : 'warning'}
                       compact
                     />
                   )}

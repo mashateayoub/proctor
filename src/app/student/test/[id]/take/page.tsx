@@ -24,6 +24,7 @@ const languageOptions: Array<{ value: RunnerLanguage; label: string; editorLangu
   { value: 'cpp', label: 'C++', editorLanguage: 'cpp' },
   { value: 'bash', label: 'Bash', editorLanguage: 'shell' },
 ];
+const defaultCodePlaceholder = '// Write your solution here...\n';
 
 export default function ActiveExamPage() {
   const router = useRouter();
@@ -49,7 +50,7 @@ export default function ActiveExamPage() {
   const [phase, setPhase] = useState<'mcq' | 'coding' | 'submitting'>('mcq');
   
   // Coding State
-  const [code, setCode] = useState('// Write your solution here...\n');
+  const [code, setCode] = useState(defaultCodePlaceholder);
   const [language, setLanguage] = useState<RunnerLanguage>('javascript');
   const [execResult, setExecResult] = useState<{output: string, error: boolean, time: number} | null>(null);
   const selectedEditorLanguage =
@@ -150,6 +151,20 @@ export default function ActiveExamPage() {
   }, [examId, supabase]);
 
   useEffect(() => {
+    if (!codingQuestion?.starter_templates) return;
+    const template = codingQuestion.starter_templates?.[language];
+    if (typeof template !== 'string' || !template.trim()) return;
+
+    setCode((prev) => {
+      const prevIsKnownTemplate = languageOptions.some(
+        (opt) => codingQuestion.starter_templates?.[opt.value] === prev,
+      );
+      const untouched = prev.trim() === '' || prev === defaultCodePlaceholder || prevIsKnownTemplate;
+      return untouched ? template : prev;
+    });
+  }, [codingQuestion, language]);
+
+  useEffect(() => {
     if (!exam || phase === 'submitting') return;
     const timer = setInterval(() => {
       setTimeLeft(prev => {
@@ -178,7 +193,11 @@ export default function ActiveExamPage() {
        });
        const data = await res.json();
        const hasError = Boolean(data?.error) || (data?.errorType && data.errorType !== 'none');
-       setExecResult({ output: data.output || 'No output.', error: hasError, time: data.executionTime || 0 });
+       setExecResult({
+         output: data.output || data.error || data.message || 'No output.',
+         error: hasError,
+         time: data.executionTime || 0
+       });
      } catch (e) {
        setExecResult({ output: 'Failed to contact execution engine.', error: true, time: 0 });
      }

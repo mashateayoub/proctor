@@ -39,6 +39,8 @@ In teacher exam authoring:
 - A test case is valid only when both `input` and `expectedOutput` are provided.
 - Partially filled test cases are flagged and blocked from publish.
 - Optional `label` is supported and preserved in grading results.
+- Starter templates are generated from challenge title/description with a deterministic function name.
+- Publish requires a stdin/stdout verification run so test-case transport is validated through the execution engine.
 
 ## Known Limits
 
