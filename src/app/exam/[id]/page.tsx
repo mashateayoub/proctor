@@ -13,6 +13,19 @@ import { normalizeErrorMessage } from '@/lib/errors';
 // Monaco editor for code block execution
 import Editor from '@monaco-editor/react';
 
+type RunnerLanguage = 'javascript' | 'python' | 'java' | 'go' | 'rust' | 'c' | 'cpp' | 'bash';
+
+const languageOptions: Array<{ value: RunnerLanguage; label: string; editorLanguage: string }> = [
+  { value: 'javascript', label: 'JavaScript (Node.js)', editorLanguage: 'javascript' },
+  { value: 'python', label: 'Python 3', editorLanguage: 'python' },
+  { value: 'java', label: 'Java (OpenJDK)', editorLanguage: 'java' },
+  { value: 'go', label: 'Go', editorLanguage: 'go' },
+  { value: 'rust', label: 'Rust', editorLanguage: 'rust' },
+  { value: 'c', label: 'C', editorLanguage: 'c' },
+  { value: 'cpp', label: 'C++', editorLanguage: 'cpp' },
+  { value: 'bash', label: 'Bash', editorLanguage: 'shell' },
+];
+
 export default function LockedExamPage() {
   const router = useRouter();
   const params = useParams();
@@ -38,7 +51,7 @@ export default function LockedExamPage() {
 
   // Coding State
   const [code, setCode] = useState('// Write your solution here...\n');
-  const [language, setLanguage] = useState<'javascript' | 'python' | 'java'>('javascript');
+  const [language, setLanguage] = useState<RunnerLanguage>('javascript');
   const [execResult, setExecResult] = useState<{ output: string; error: boolean; time: number } | null>(null);
 
   // Timer
@@ -173,7 +186,8 @@ export default function LockedExamPage() {
         body: JSON.stringify({ code, language }),
       });
       const data = await res.json();
-      setExecResult({ output: data.output || 'No output.', error: data.error, time: data.executionTime });
+      const hasError = Boolean(data?.error) || (data?.errorType && data.errorType !== 'none');
+      setExecResult({ output: data.output || 'No output.', error: hasError, time: data.executionTime || 0 });
     } catch {
       setExecResult({ output: 'Failed to contact execution engine.', error: true, time: 0 });
     }
@@ -218,14 +232,20 @@ export default function LockedExamPage() {
             body: JSON.stringify({ code, language, testCases }),
           });
           const data = await res.json();
+          const hasError = Boolean(data?.error) || (data?.errorType && data.errorType !== 'none');
           codingSubmissions = [{
             code,
             language,
             executionTime: data.executionTime || 0,
-            success: data.passedCount === data.totalCount,
+            success: !hasError && data.passedCount === data.totalCount,
             testResults: data.testResults || [],
             passedCount: data.passedCount || 0,
             totalCount: data.totalCount || 0,
+            status: data.status || 'completed',
+            errorType: data.errorType || 'none',
+            runId: data.runId || null,
+            truncated: Boolean(data.truncated),
+            metrics: data.metrics || null,
           }];
         } catch {
           codingSubmissions = [{
@@ -516,11 +536,13 @@ export default function LockedExamPage() {
               <select
                 className="bg-[#1e1e1e] text-white/80 border border-white/10 rounded px-2 py-1 text-[12px] font-mono outline-none focus:border-blue-500"
                 value={language}
-                onChange={(e: any) => setLanguage(e.target.value)}
+                onChange={(e) => setLanguage(e.target.value as RunnerLanguage)}
               >
-                <option value="javascript">JavaScript (Node.js)</option>
-                <option value="python">Python 3</option>
-                <option value="java">Java (OpenJDK)</option>
+                {languageOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
               <div className="flex gap-2">
                 <button
@@ -541,7 +563,7 @@ export default function LockedExamPage() {
             <div className="flex-grow relative">
               <Editor
                 height="100%"
-                language={language}
+                language={selectedEditorLanguage}
                 theme="vs-dark"
                 value={code}
                 onChange={val => setCode(val || '')}
@@ -577,3 +599,5 @@ export default function LockedExamPage() {
     </div>
   );
 }
+  const selectedEditorLanguage =
+    languageOptions.find((option) => option.value === language)?.editorLanguage || 'plaintext';

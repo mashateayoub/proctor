@@ -79,6 +79,9 @@ export default function CreateExamPage() {
   const completedCaseCount = testCases.filter(
     (tc) => tc.input.trim() && tc.expectedOutput.trim(),
   ).length;
+  const hasIncompleteCases = testCases.some(
+    (tc) => Boolean(tc.input.trim()) !== Boolean(tc.expectedOutput.trim()),
+  );
 
   const reviewChecks = useMemo(() => {
     const checks = [];
@@ -189,13 +192,20 @@ export default function CreateExamPage() {
     }
 
     if (codingEnabled) {
+      if (hasIncompleteCases) {
+        setError('Each test case must include both stdin input and expected stdout.');
+        setLoading(false);
+        setCurrentStep('tests');
+        return;
+      }
+
       const { error: codeError } = await supabase
         .from('coding_questions')
         .insert({
           exam_id: exam.id,
           question_text: codingQuestion.question_text.trim(),
           description: codingQuestion.description.trim(),
-          test_cases: testCases.filter((tc) => tc.input.trim() || tc.expectedOutput.trim()),
+          test_cases: testCases.filter((tc) => tc.input.trim() && tc.expectedOutput.trim()),
         });
 
       if (codeError) {
@@ -400,6 +410,20 @@ export default function CreateExamPage() {
                       compact
                     />
                   )}
+                  {codingEnabled && (
+                    <FeedbackBanner
+                      message="Exercise format: input is raw stdin, expected output is exact stdout (trim-based compare). Avoid prompts/debug logs and keep output deterministic."
+                      variant="info"
+                      compact
+                    />
+                  )}
+                  {codingEnabled && hasIncompleteCases && (
+                    <FeedbackBanner
+                      message="Some test cases are incomplete. Fill both Input and Expected Output for each case."
+                      variant="warning"
+                      compact
+                    />
+                  )}
 
                   <AnimatePresence>
                     {codingEnabled && (
@@ -427,6 +451,18 @@ export default function CreateExamPage() {
                               </button>
                             </div>
                             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                              <div className="md:col-span-2">
+                                <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-ash">
+                                  Label (Optional)
+                                </label>
+                                <input
+                                  type="text"
+                                  className={inputStyles}
+                                  placeholder={`case ${idx + 1}`}
+                                  value={tc.label}
+                                  onChange={(e) => updateTestCase(idx, 'label', e.target.value)}
+                                />
+                              </div>
                               <div>
                                 <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-ash">
                                   Input

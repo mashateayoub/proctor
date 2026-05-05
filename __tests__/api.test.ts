@@ -1,81 +1,125 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { POST } from '../src/app/api/execute/route';
 
-// We must mock the Next.js Request object class logic for the route handler
-const mockNextRequest = (body: any) => {
-  return {
-    json: async () => body
-  } as any;
-};
+const originalEnv = process.env;
 
-// 1. Mock Node Modules globally to prevent executing actual arbitrary strings during CI tests
-vi.mock('fs', () => ({
-  promises: {
-    mkdtemp: vi.fn().mockResolvedValue('/tmp/mock-dir-123'),
-    writeFile: vi.fn().mockResolvedValue(undefined),
-    rm: vi.fn().mockResolvedValue(undefined),
-  }
-}));
-vi.mock('os', () => ({
-  tmpdir: vi.fn().mockReturnValue('/tmp'),
-}));
+const mockNextRequest = (body: any) =>
+    ({
+        json: async () => body,
+    }) as any;
 
-vi.mock('child_process', () => ({
-  exec: vi.fn((command: string, options: any, callback: any) => {
-    // If the test sends a "syntax error" snippet, simulate a python crash
-    if (command.includes('SyntaxError')) {
-      return callback(new Error('Command failed'), '', 'SyntaxError: invalid syntax');
-    }
-    // Otherwise return success
-    return callback(null, 'Hello World\n', '');
-  }),
-}));
-
-describe('Serverless Code Execution Endpoint (/api/execute)', () => {
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('Successfully safely wraps and evaluates valid Python Code payload', async () => {
-    const req = mockNextRequest({
-       language: 'python',
-       code: 'print("Hello World")'
+describe('Execution API route (/api/execute)', () => {
+    beforeEach(() => {
+        vi.restoreAllMocks();
+        process.env = { ...originalEnv };
+        process.env.EXECUTION_REMOTE_URL = 'https://runner.example.com/execute';
+        process.env.EXECUTION_REMOTE_TOKEN = 'secret-token';
     });
 
-    const response = await POST(req);
-    const json = await response.json();
+    it('forwards sync execution and returns normalized free-run output', async () => {
+        const fetchMock = vi.spyOn(global, 'fetch' as any).mockResolvedValue({
+            ok: true,
+            status: 200,
+            text: async () =>
+                JSON.stringify({
+                    provider: 'remote',
+                    status: 'completed',
+                    errorType: 'none',
+                    output: 'Hello runner',
+                    executionTime: 12,
+                    runId: 'run_123',
+                }),
+        } as any);
 
-    expect(response.status).toBe(200);
-    expect(json.output.trim()).toBe('Hello World');
-    expect(json.error).toBeUndefined();
-    // Timing mock ensures executionTime is attached
-    expect(json.executionTime).toBeDefined();
-  });
+        const response = await POST(
+            mockNextRequest({
+                language: 'python',
+                code: 'print("hello")',
+            }),
+        );
+        const json = await response.json();
 
-  it('Successfully isolates and captures language compilation/syntax errors', async () => {
-    const req = mockNextRequest({
-       language: 'python',
-       code: 'print("SyntaxError")'
+        expect(response.status).toBe(200);
+        expect(json.output).toBe('Hello runner');
+        expect(json.error).toBe(false);
+        expect(json.status).toBe('completed');
+        expect(json.errorType).toBe('none');
+        expect(json.runId).toBe('run_123');
+        expect(fetchMock).toHaveBeenCalledTimes(1);
     });
 
-    const response = await POST(req);
-    const json = await response.json();
+    it('forwards test cases and returns verdict fields', async () => {
+        vi.spyOn(global, 'fetch' as any).mockResolvedValue({
+            ok: true,
+            status: 200,
+            text: async () =>
+                JSON.stringify({
+                    status: 'completed',
+                    errorType: 'none',
+                    testResults: [{ label: 'case 1', passed: true, expected: '10', actual: '10' }],
+                    passedCount: 1,
+                    totalCount: 1,
+                    executionTime: 18,
+                }),
+        } as any);
 
-    expect(response.status).toBe(200); // 200 because the route successfully resolved (the *code* failed)
-    expect(json.error).toContain('SyntaxError: invalid syntax');
-  });
+        const response = await POST(
+            mockNextRequest({
+                language: 'python',
+                code: 'n = int(input()); print(n*2)',
+                testCases: [{ label: 'case 1', input: '5', expectedOutput: '10' }],
+            }),
+        );
+        const json = await response.json();
 
-  it('Rejects unknown runtime languages explicitly to protect server environment', async () => {
-    const req = mockNextRequest({
-       language: 'bash',
-       code: 'rm -rf /*'
+        expect(response.status).toBe(200);
+        expect(json.passedCount).toBe(1);
+        expect(json.totalCount).toBe(1);
+        expect(json.testResults).toHaveLength(1);
+        expect(json.error).toBe(false);
     });
 
-    const response = await POST(req);
-    const json = await response.json();
+    it('rejects unsupported languages before calling runner', async () => {
+        const fetchMock = vi.spyOn(global, 'fetch' as any);
 
-    expect(response.status).toBe(400); 
-    expect(json.error).toBe('Unsupported language wrapper specified.');
-  });
+        const response = await POST(
+            mockNextRequest({
+                language: 'perl',
+                code: 'print 1',
+            }),
+        );
+        const json = await response.json();
+
+        expect(response.status).toBe(400);
+        expect(json.error).toBe('Unsupported language wrapper specified.');
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('maps upstream errors to client error payload', async () => {
+        vi.spyOn(global, 'fetch' as any).mockResolvedValue({
+            ok: false,
+            status: 429,
+            text: async () =>
+                JSON.stringify({
+                    error: 'Rate limit exceeded',
+                    status: 'failed',
+                    errorType: 'infra_error',
+                    runId: 'run_rl_1',
+                }),
+        } as any);
+
+        const response = await POST(
+            mockNextRequest({
+                language: 'python',
+                code: 'print(1)',
+            }),
+        );
+        const json = await response.json();
+
+        expect(response.status).toBe(429);
+        expect(json.error).toBe('Rate limit exceeded');
+        expect(json.status).toBe('failed');
+        expect(json.errorType).toBe('infra_error');
+        expect(json.runId).toBe('run_rl_1');
+    });
 });

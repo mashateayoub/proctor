@@ -12,6 +12,19 @@ import { normalizeErrorMessage } from '@/lib/errors';
 // Monaco editor for code block execution
 import Editor from '@monaco-editor/react';
 
+type RunnerLanguage = 'javascript' | 'python' | 'java' | 'go' | 'rust' | 'c' | 'cpp' | 'bash';
+
+const languageOptions: Array<{ value: RunnerLanguage; label: string; editorLanguage: string }> = [
+  { value: 'javascript', label: 'JavaScript (Node.js)', editorLanguage: 'javascript' },
+  { value: 'python', label: 'Python 3', editorLanguage: 'python' },
+  { value: 'java', label: 'Java (OpenJDK)', editorLanguage: 'java' },
+  { value: 'go', label: 'Go', editorLanguage: 'go' },
+  { value: 'rust', label: 'Rust', editorLanguage: 'rust' },
+  { value: 'c', label: 'C', editorLanguage: 'c' },
+  { value: 'cpp', label: 'C++', editorLanguage: 'cpp' },
+  { value: 'bash', label: 'Bash', editorLanguage: 'shell' },
+];
+
 export default function ActiveExamPage() {
   const router = useRouter();
   const params = useParams();
@@ -37,8 +50,10 @@ export default function ActiveExamPage() {
   
   // Coding State
   const [code, setCode] = useState('// Write your solution here...\n');
-  const [language, setLanguage] = useState<'javascript'|'python'|'java'>('javascript');
+  const [language, setLanguage] = useState<RunnerLanguage>('javascript');
   const [execResult, setExecResult] = useState<{output: string, error: boolean, time: number} | null>(null);
+  const selectedEditorLanguage =
+    languageOptions.find((option) => option.value === language)?.editorLanguage || 'plaintext';
 
   // Timer
   const [timeLeft, setTimeLeft] = useState(0);
@@ -162,7 +177,8 @@ export default function ActiveExamPage() {
          body: JSON.stringify({ code, language })
        });
        const data = await res.json();
-       setExecResult({ output: data.output || 'No output.', error: data.error, time: data.executionTime });
+       const hasError = Boolean(data?.error) || (data?.errorType && data.errorType !== 'none');
+       setExecResult({ output: data.output || 'No output.', error: hasError, time: data.executionTime || 0 });
      } catch (e) {
        setExecResult({ output: 'Failed to contact execution engine.', error: true, time: 0 });
      }
@@ -194,7 +210,16 @@ export default function ActiveExamPage() {
 
     // Build Payload
     const mcqScore = calculateMcqScore();
-    const codingSubmissions = codingQuestion ? [{ code, language, executionTime: execResult?.time || 0, success: !execResult?.error }] : [];
+    const codingSubmissions = codingQuestion
+      ? [{
+          code,
+          language,
+          executionTime: execResult?.time || 0,
+          success: !execResult?.error,
+          status: execResult?.error ? 'failed' : 'completed',
+          errorType: execResult?.error ? 'runtime_error' : 'none',
+        }]
+      : [];
 
     const { data: result, error: submitErr } = await supabase
       .from('results')
@@ -332,11 +357,13 @@ export default function ActiveExamPage() {
                   <select 
                     className="bg-[#1e1e1e] text-white border border-white/20 rounded px-2 py-1 text-[12px] font-mono outline-none focus:border-rausch"
                     value={language}
-                    onChange={(e: any) => setLanguage(e.target.value)}
+                    onChange={(e) => setLanguage(e.target.value as RunnerLanguage)}
                   >
-                     <option value="javascript">JavaScript (Node.js)</option>
-                     <option value="python">Python 3</option>
-                     <option value="java">Java (OpenJDK)</option>
+                    {languageOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
                   </select>
                   <div className="flex gap-2">
                      <Button variant="pill-link" size="xs" className="text-white border-white border" onClick={handleRunCode}>Run Code</Button>
@@ -347,7 +374,7 @@ export default function ActiveExamPage() {
                <div className="flex-grow relative">
                  <Editor
                     height="100%"
-                    language={language}
+                    language={selectedEditorLanguage}
                     theme="vs-dark"
                     value={code}
                     onChange={(val) => setCode(val || '')}
