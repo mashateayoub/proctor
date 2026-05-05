@@ -6,6 +6,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import { Button } from '@/components/ui/Button';
 import { FeedbackBanner } from '@/components/ui/FeedbackBanner';
 import ProctorCamera from '@/components/ProctorCamera';
+import { V86LabPanel } from '@/components/V86LabPanel';
 import { persistProctoringLog } from '@/lib/proctoringLogs';
 import { normalizeErrorMessage } from '@/lib/errors';
 
@@ -37,8 +38,18 @@ export default function ActiveExamPage() {
   
   // Coding State
   const [code, setCode] = useState('// Write your solution here...\n');
-  const [language, setLanguage] = useState<'javascript'|'python'|'java'>('javascript');
-  const [execResult, setExecResult] = useState<{output: string, error: boolean, time: number} | null>(null);
+  const [language, setLanguage] = useState<
+    'javascript'|'python'|'java'|'go'|'rust'|'c'|'cpp'|'bash'
+  >('javascript');
+  const [execResult, setExecResult] = useState<{
+    output: string;
+    error: boolean;
+    time: number;
+    provider?: 'local' | 'remote';
+    upstreamError?: string;
+  } | null>(null);
+  const [sandboxUrl, setSandboxUrl] = useState<string>('');
+  const [sandboxProfileName, setSandboxProfileName] = useState<string>('Linux Lab');
 
   // Timer
   const [timeLeft, setTimeLeft] = useState(0);
@@ -59,6 +70,8 @@ export default function ActiveExamPage() {
       if (eData) {
         setExam(eData);
         setTimeLeft(eData.duration_minutes * 60);
+        setSandboxUrl(eData?.vm_profile?.iframe_url || '');
+        setSandboxProfileName(eData?.vm_profile?.profile_name || 'Linux Lab');
       }
 
       // 2. Fetch MCQs
@@ -162,7 +175,13 @@ export default function ActiveExamPage() {
          body: JSON.stringify({ code, language })
        });
        const data = await res.json();
-       setExecResult({ output: data.output || 'No output.', error: data.error, time: data.executionTime });
+       setExecResult({
+         output: data.output || data.upstreamError || 'No output.',
+         error: !!data.error,
+         time: data.executionTime || 0,
+         provider: data.provider,
+         upstreamError: data.upstreamError,
+       });
      } catch (e) {
        setExecResult({ output: 'Failed to contact execution engine.', error: true, time: 0 });
      }
@@ -246,6 +265,9 @@ export default function ActiveExamPage() {
   const m: number = Math.floor(timeLeft / 60);
   const s: number = timeLeft % 60;
   const timeString = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  const isTerminalLab = exam?.environment_mode === 'terminal_lab';
+  const isHybrid = exam?.environment_mode === 'hybrid';
+  const showCodingOrLab = Boolean(codingQuestion) || isTerminalLab || isHybrid;
 
   return (
     <div className="min-h-screen bg-soft-cloud text-ink flex flex-col pt-[48px]">
@@ -305,8 +327,8 @@ export default function ActiveExamPage() {
                   </Button>
  
                   {currentIdx === questions.length - 1 ? (
-                    <Button variant="primary-blue" onClick={() => codingQuestion ? setPhase('coding') : handleSubmit()}>
-                       {codingQuestion ? 'Proceed to Coding Phase' : '✓ Submit Exam'}
+                    <Button variant="primary-blue" onClick={() => showCodingOrLab ? setPhase('coding') : handleSubmit()}>
+                       {showCodingOrLab ? 'Proceed to Workspace' : '✓ Submit Exam'}
                     </Button>
                   ) : (
                     <Button variant="primary-blue" onClick={() => setCurrentIdx(prev => prev + 1)}>
@@ -318,13 +340,13 @@ export default function ActiveExamPage() {
          </div>
       )}
 
-      {phase === 'coding' && codingQuestion && (
+      {phase === 'coding' && (
          <div className="flex-grow flex flex-col lg:flex-row h-[calc(100vh-48px)]">
             {/* Split Screen Component for Coding block */}
             <div className="w-full lg:w-1/3 border-r border-hairline bg-soft-cloud p-6 overflow-y-auto">
-               <h2 className="text-card-title mb-4">{codingQuestion.question_text}</h2>
+               <h2 className="text-card-title mb-4">{codingQuestion?.question_text || sandboxProfileName}</h2>
                <p className="text-body-standard text-ash whitespace-pre-wrap">
-                 {codingQuestion.description}
+                 {codingQuestion?.description || 'Use the Linux terminal session to complete this technical exercise.'}
                </p>
             </div>
             <div className="w-full lg:w-2/3 flex flex-col bg-[#1e1e1e]">
@@ -337,6 +359,11 @@ export default function ActiveExamPage() {
                      <option value="javascript">JavaScript (Node.js)</option>
                      <option value="python">Python 3</option>
                      <option value="java">Java (OpenJDK)</option>
+                     <option value="go">Go</option>
+                     <option value="rust">Rust</option>
+                     <option value="c">C (GCC)</option>
+                     <option value="cpp">C++ (G++)</option>
+                     <option value="bash">Bash</option>
                   </select>
                   <div className="flex gap-2">
                      <Button variant="pill-link" size="xs" className="text-white border-white border" onClick={handleRunCode}>Run Code</Button>
@@ -355,9 +382,34 @@ export default function ActiveExamPage() {
                  />
                </div>
 
+               {(isTerminalLab || isHybrid) && (
+                 <div className="h-[280px] border-t border-white/10">
+                   <V86LabPanel
+                     className="h-full w-full"
+                     vmProfile={{
+                       provider: 'v86',
+                       profile_name: sandboxProfileName,
+                       boot_mode: exam?.vm_profile?.boot_mode || 'kernel',
+                       wasm_path: exam?.vm_profile?.wasm_path,
+                       bios_url: exam?.vm_profile?.bios_url,
+                       vga_bios_url: exam?.vm_profile?.vga_bios_url,
+                       bzimage_url: exam?.vm_profile?.bzimage_url,
+                       initrd_url: exam?.vm_profile?.initrd_url,
+                       hda_url: exam?.vm_profile?.hda_url,
+                       cdrom_url: exam?.vm_profile?.cdrom_url,
+                       cmdline: exam?.vm_profile?.cmdline,
+                       memory_mb: exam?.vm_profile?.memory_mb,
+                       vga_memory_mb: exam?.vm_profile?.vga_memory_mb,
+                     }}
+                   />
+                 </div>
+               )}
+
                {/* Console Output block */}
                <div className="h-[200px] bg-black border-t border-white/10 overflow-y-auto p-4 text-white font-mono text-[12px]">
-                  <div className="text-white/50 mb-2">Terminal Output ({execResult?.time || 0}ms)</div>
+                  <div className="text-white/50 mb-2">
+                    Terminal Output ({execResult?.time || 0}ms){execResult?.provider ? ` · ${execResult.provider}` : ''}
+                  </div>
                   {execResult && (
                     <div className={`${execResult.error ? 'text-red-400' : 'text-green-400'} whitespace-pre-wrap`}>
                        {execResult.output}

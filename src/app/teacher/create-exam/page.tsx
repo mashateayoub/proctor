@@ -10,6 +10,7 @@ import { FeedbackBanner } from '@/components/ui/FeedbackBanner';
 import { useToast } from '@/components/ui/ToastProvider';
 import { fadeUp, fadeIn } from '@/lib/motion';
 import { normalizeErrorMessage } from '@/lib/errors';
+import { EnvironmentMode } from '@/types/sandbox';
 
 type StepId = 'details' | 'coding' | 'tests' | 'review';
 
@@ -64,6 +65,11 @@ export default function CreateExamPage() {
     total_questions: 10,
     live_date: '',
     dead_date: '',
+    environment_mode: 'standard' as EnvironmentMode,
+    sandbox_profile_name: 'Linux Shell Lab',
+    sandbox_url: '/v86/images/buildroot-bzimage68.bin',
+    execution_provider: 'remote' as 'local' | 'remote',
+    preferred_languages: 'javascript,python,java,go,rust,c,cpp,bash',
   });
 
   const [codingQuestion, setCodingQuestion] = useState({
@@ -86,6 +92,12 @@ export default function CreateExamPage() {
     checks.push({ ok: examData.duration_minutes > 0, label: 'Duration is valid' });
     checks.push({ ok: examData.total_questions >= 0, label: 'MCQ target is valid' });
     checks.push({ ok: scheduleStatus.tone !== 'error' && scheduleStatus.tone !== 'neutral', label: 'Schedule is valid' });
+    checks.push({
+      ok:
+        examData.environment_mode === 'standard' ||
+        Boolean(examData.sandbox_url.trim()),
+      label: 'Kernel image URL configured for terminal/hybrid mode',
+    });
     return checks;
   }, [examData, scheduleStatus.tone]);
 
@@ -111,6 +123,9 @@ export default function CreateExamPage() {
     const dead = new Date(examData.dead_date);
     if (Number.isNaN(live.getTime()) || Number.isNaN(dead.getTime())) return 'Please provide valid dates.';
     if (dead <= live) return 'Dead date must be after live date.';
+    if (examData.environment_mode !== 'standard' && !examData.sandbox_url.trim()) {
+      return 'Kernel image URL is required for terminal/hybrid environments.';
+    }
     return null;
   };
 
@@ -178,6 +193,28 @@ export default function CreateExamPage() {
         live_date: new Date(examData.live_date).toISOString(),
         dead_date: new Date(examData.dead_date).toISOString(),
         pin_code: generatedPin,
+        environment_mode: examData.environment_mode,
+        vm_profile: {
+          provider: 'v86',
+          profile_name: examData.sandbox_profile_name.trim() || 'Linux Lab',
+          boot_mode: 'kernel',
+          wasm_path: '/v86/build/v86.wasm',
+          bios_url: '/v86/bios/seabios.bin',
+          vga_bios_url: '/v86/bios/vgabios.bin',
+          bzimage_url: examData.sandbox_url.trim(),
+          memory_mb: 256,
+          vga_memory_mb: 8,
+          cmdline: 'rw root=/dev/ram0 console=ttyS0 mitigations=off random.trust_cpu=on',
+          network_mode: 'restricted_fetch_wisp',
+        },
+        execution_policy: {
+          provider: examData.execution_provider,
+          terminal_enabled: examData.environment_mode !== 'standard',
+          preferred_languages: examData.preferred_languages
+            .split(',')
+            .map((value) => value.trim())
+            .filter(Boolean),
+        },
       })
       .select()
       .single();
@@ -345,6 +382,102 @@ export default function CreateExamPage() {
                       />
                     </div>
                   </div>
+
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <div>
+                      <label className="mb-1 block text-caption font-semibold uppercase tracking-wider text-ash">
+                        Environment Mode
+                      </label>
+                      <select
+                        className={inputStyles}
+                        value={examData.environment_mode}
+                        onChange={(e) =>
+                          setExamData((prev) => ({
+                            ...prev,
+                            environment_mode: e.target.value as EnvironmentMode,
+                          }))
+                        }
+                      >
+                        <option value="standard">Standard (MCQ + coding)</option>
+                        <option value="terminal_lab">Terminal/Linux Lab only</option>
+                        <option value="hybrid">Hybrid (coding + terminal lab)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-caption font-semibold uppercase tracking-wider text-ash">
+                        Execution Provider
+                      </label>
+                      <select
+                        className={inputStyles}
+                        value={examData.execution_provider}
+                        onChange={(e) =>
+                          setExamData((prev) => ({
+                            ...prev,
+                            execution_provider: e.target.value as 'local' | 'remote',
+                          }))
+                        }
+                      >
+                        <option value="remote">Remote universal sandbox</option>
+                        <option value="local">Local fallback (dev only)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {examData.environment_mode !== 'standard' && (
+                    <div className="rounded-[10px] border border-hairline bg-soft-cloud/40 p-3">
+                      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-mute">
+                        Terminal/Linux Lab Profile
+                      </p>
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                        <div>
+                          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-ash">
+                            Profile Name
+                          </label>
+                          <input
+                            className={inputStyles}
+                            value={examData.sandbox_profile_name}
+                            onChange={(e) =>
+                              setExamData((prev) => ({
+                                ...prev,
+                                sandbox_profile_name: e.target.value,
+                              }))
+                            }
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-ash">
+                            Kernel image URL
+                          </label>
+                          <input
+                            className={inputStyles}
+                            placeholder="/v86/images/buildroot-bzimage68.bin"
+                            value={examData.sandbox_url}
+                            onChange={(e) =>
+                              setExamData((prev) => ({
+                                ...prev,
+                                sandbox_url: e.target.value,
+                              }))
+                            }
+                          />
+                        </div>
+                      </div>
+                      <div className="mt-3">
+                        <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-ash">
+                          Preferred Languages (comma-separated)
+                        </label>
+                        <input
+                          className={inputStyles}
+                          value={examData.preferred_languages}
+                          onChange={(e) =>
+                            setExamData((prev) => ({
+                              ...prev,
+                              preferred_languages: e.target.value,
+                            }))
+                          }
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -578,6 +711,21 @@ export default function CreateExamPage() {
                       ? `${codingQuestion.question_text.trim()} (${completedCaseCount}/${testCases.length} cases complete)`
                       : 'No coding challenge attached'}
                   </p>
+                </div>
+
+                <div className="rounded-[10px] border border-hairline bg-soft-cloud/40 p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-mute">Runtime Environment</p>
+                  <p className="mt-1 text-[12px] text-ash">
+                    Mode: <span className="font-semibold text-ink">{examData.environment_mode}</span>
+                  </p>
+                  <p className="mt-1 text-[12px] text-ash">
+                    Executor: <span className="font-semibold text-ink">{examData.execution_provider}</span>
+                  </p>
+                  {examData.environment_mode !== 'standard' && (
+                    <p className="mt-1 text-[12px] text-ash break-all">
+                      Kernel: <span className="font-semibold text-ink">{examData.sandbox_url || 'not set'}</span>
+                    </p>
+                  )}
                 </div>
 
                 <div className="rounded-[10px] border border-hairline bg-soft-cloud/40 p-3">

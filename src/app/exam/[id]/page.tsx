@@ -6,6 +6,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import { Button } from '@/components/ui/Button';
 import { FeedbackBanner } from '@/components/ui/FeedbackBanner';
 import ProctorCamera from '@/components/ProctorCamera';
+import { V86LabPanel } from '@/components/V86LabPanel';
 import { useExamLockdown, LockdownViolation } from '@/hooks/useExamLockdown';
 import { persistProctoringLog } from '@/lib/proctoringLogs';
 import { normalizeErrorMessage } from '@/lib/errors';
@@ -38,8 +39,18 @@ export default function LockedExamPage() {
 
   // Coding State
   const [code, setCode] = useState('// Write your solution here...\n');
-  const [language, setLanguage] = useState<'javascript' | 'python' | 'java'>('javascript');
-  const [execResult, setExecResult] = useState<{ output: string; error: boolean; time: number } | null>(null);
+  const [language, setLanguage] = useState<
+    'javascript' | 'python' | 'java' | 'go' | 'rust' | 'c' | 'cpp' | 'bash'
+  >('javascript');
+  const [execResult, setExecResult] = useState<{
+    output: string;
+    error: boolean;
+    time: number;
+    provider?: 'local' | 'remote';
+    upstreamError?: string;
+  } | null>(null);
+  const [sandboxUrl, setSandboxUrl] = useState<string>('');
+  const [sandboxProfileName, setSandboxProfileName] = useState<string>('Linux Lab');
 
   // Timer
   const [timeLeft, setTimeLeft] = useState(0);
@@ -74,6 +85,8 @@ export default function LockedExamPage() {
       if (eData) {
         setExam(eData);
         setTimeLeft(eData.duration_minutes * 60);
+        setSandboxUrl(eData?.vm_profile?.iframe_url || '');
+        setSandboxProfileName(eData?.vm_profile?.profile_name || 'Linux Lab');
       }
       const { data: qData } = await supabase.from('questions').select('*').eq('exam_id', examId);
       if (qData) setQuestions(qData);
@@ -173,7 +186,13 @@ export default function LockedExamPage() {
         body: JSON.stringify({ code, language }),
       });
       const data = await res.json();
-      setExecResult({ output: data.output || 'No output.', error: data.error, time: data.executionTime });
+      setExecResult({
+        output: data.output || data.upstreamError || 'No output.',
+        error: !!data.error,
+        time: data.executionTime || 0,
+        provider: data.provider,
+        upstreamError: data.upstreamError,
+      });
     } catch {
       setExecResult({ output: 'Failed to contact execution engine.', error: true, time: 0 });
     }
@@ -346,10 +365,14 @@ export default function LockedExamPage() {
   const s = timeLeft % 60;
   const timeString = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   const isTimeCritical = timeLeft < 60;
+  const isTerminalLab = exam?.environment_mode === 'terminal_lab';
+  const isHybrid = exam?.environment_mode === 'hybrid';
+  const showCodingOrLab = Boolean(codingQuestion) || isTerminalLab || isHybrid;
 
   return (
-    <div className="fixed inset-0 bg-[#0a0a0a] text-white flex flex-col overflow-hidden select-none"
-         style={{ userSelect: 'none' }}
+    <div
+      className="fixed inset-0 bg-[#0a0a0a] text-white flex flex-col overflow-hidden"
+      style={{ userSelect: phase === 'coding' ? 'text' : 'none' }}
     >
       <div className="fixed left-1/2 top-[54px] z-[205] w-[min(680px,calc(100vw-1.5rem))] -translate-x-1/2">
         <FeedbackBanner
@@ -484,9 +507,9 @@ export default function LockedExamPage() {
               {currentIdx === questions.length - 1 ? (
                 <Button
                   variant="primary-blue"
-                  onClick={() => (codingQuestion ? setPhase('coding') : handleSubmit())}
+                  onClick={() => (showCodingOrLab ? setPhase('coding') : handleSubmit())}
                 >
-                  {codingQuestion ? 'Proceed to Coding →' : '✓ Submit Exam'}
+                  {showCodingOrLab ? 'Proceed to Workspace →' : '✓ Submit Exam'}
                 </Button>
               ) : (
                 <Button variant="primary-blue" onClick={() => setCurrentIdx(prev => prev + 1)}>
@@ -499,15 +522,24 @@ export default function LockedExamPage() {
       )}
 
       {/* ── Coding Phase ── */}
-      {phase === 'coding' && codingQuestion && (
+      {phase === 'coding' && (
         <div className="flex-grow flex flex-col lg:flex-row overflow-hidden">
           {/* Problem Panel */}
           <div className="w-full lg:w-[380px] border-r border-white/10 bg-[#111] p-6 overflow-y-auto">
-            <span className="text-[11px] text-white/30 font-mono uppercase tracking-wider">Coding Challenge</span>
-            <h2 className="text-[18px] font-bold mt-2 mb-4">{codingQuestion.question_text}</h2>
+            <span className="text-[11px] text-white/30 font-mono uppercase tracking-wider">Exercise Workspace</span>
+            <h2 className="text-[18px] font-bold mt-2 mb-4">
+              {codingQuestion?.question_text || sandboxProfileName}
+            </h2>
             <p className="text-[14px] text-white/60 whitespace-pre-wrap leading-relaxed">
-              {codingQuestion.description}
+              {codingQuestion?.description || 'Use the Linux terminal session to solve the technical task.'}
             </p>
+            {(isTerminalLab || isHybrid) && (
+              <div className="mt-6 rounded-[10px] border border-white/10 bg-black/30 p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-white/60">Linux Terminal Lab</p>
+                <p className="mt-1 text-[12px] text-white/70">Environment: {sandboxProfileName}</p>
+                <p className="mt-1 text-[12px] text-white/50">Network policy: restricted fetch/wisp</p>
+              </div>
+            )}
           </div>
 
           {/* Editor Panel */}
@@ -521,6 +553,11 @@ export default function LockedExamPage() {
                 <option value="javascript">JavaScript (Node.js)</option>
                 <option value="python">Python 3</option>
                 <option value="java">Java (OpenJDK)</option>
+                <option value="go">Go</option>
+                <option value="rust">Rust</option>
+                <option value="c">C (GCC)</option>
+                <option value="cpp">C++ (G++)</option>
+                <option value="bash">Bash</option>
               </select>
               <div className="flex gap-2">
                 <button
@@ -549,10 +586,33 @@ export default function LockedExamPage() {
               />
             </div>
 
+            {(isTerminalLab || isHybrid) && (
+              <div className="h-[300px] border-t border-white/10">
+                <V86LabPanel
+                  className="h-full w-full"
+                  vmProfile={{
+                    provider: 'v86',
+                    profile_name: sandboxProfileName,
+                    boot_mode: exam?.vm_profile?.boot_mode || 'kernel',
+                    wasm_path: exam?.vm_profile?.wasm_path,
+                    bios_url: exam?.vm_profile?.bios_url,
+                    vga_bios_url: exam?.vm_profile?.vga_bios_url,
+                    bzimage_url: exam?.vm_profile?.bzimage_url,
+                    initrd_url: exam?.vm_profile?.initrd_url,
+                    hda_url: exam?.vm_profile?.hda_url,
+                    cdrom_url: exam?.vm_profile?.cdrom_url,
+                    cmdline: exam?.vm_profile?.cmdline,
+                    memory_mb: exam?.vm_profile?.memory_mb,
+                    vga_memory_mb: exam?.vm_profile?.vga_memory_mb,
+                  }}
+                />
+              </div>
+            )}
+
             {/* Console */}
             <div className="h-[180px] bg-[#0d0d0d] border-t border-white/5 overflow-y-auto p-4 font-mono text-[12px]">
               <div className="text-white/30 mb-2 text-[11px] uppercase tracking-wider">
-                Output {execResult?.time ? `(${execResult.time}ms)` : ''}
+                Output {execResult?.time ? `(${execResult.time}ms)` : ''}{execResult?.provider ? ` · ${execResult.provider}` : ''}
               </div>
               {execResult && (
                 <div className={`${execResult.error ? 'text-red-400' : 'text-green-400'} whitespace-pre-wrap`}>

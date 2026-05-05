@@ -66,8 +66,23 @@ export default function ExamInstructionsPage() {
                    </div>
                    <div>
                      <span className="text-[11px] font-bold text-[var(--color-ash)] uppercase tracking-wider block mb-1">Total Questions</span>
-                     <span className="font-display font-bold text-[20px]">{exam.total_questions} MCQs + 1 Coding</span>
+                     <span className="font-display font-bold text-[20px]">
+                       {exam.environment_mode === 'terminal_lab'
+                         ? `${exam.total_questions} MCQs + Linux Lab`
+                         : exam.environment_mode === 'hybrid'
+                           ? `${exam.total_questions} MCQs + Coding + Linux Lab`
+                           : `${exam.total_questions} MCQs + Coding`}
+                     </span>
                    </div>
+                </div>
+
+                <div className="rounded-[10px] border border-[var(--color-hairline)] bg-[var(--color-soft-cloud)]/50 p-3">
+                  <span className="text-[11px] font-bold text-[var(--color-ash)] uppercase tracking-wider block mb-1">
+                    Runtime Environment
+                  </span>
+                  <p className="text-[13px] text-[var(--color-ink)] font-semibold">
+                    {exam.environment_mode || 'standard'}
+                  </p>
                 </div>
 
                 <div>
