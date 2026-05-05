@@ -55,12 +55,25 @@ export async function POST(req: NextRequest) {
             payload.testCases = testCases;
         }
 
-        const upstream = await fetch(executeUrl, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(payload),
-            cache: 'no-store',
-        });
+        let upstream: Response;
+        try {
+            upstream = await fetch(executeUrl, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload),
+                cache: 'no-store',
+            });
+        } catch (networkError: any) {
+            return NextResponse.json(
+                {
+                    output: `Runner unavailable at ${executeUrl}. ${networkError?.message || 'Network error.'}`,
+                    error: true,
+                    status: 'failed',
+                    errorType: 'infra_error',
+                },
+                { status: 503 },
+            );
+        }
 
         const rawText = await upstream.text();
         let data: any = {};
@@ -78,9 +91,17 @@ export async function POST(req: NextRequest) {
         }
 
         if (!upstream.ok) {
+            const upstreamErrorText =
+                data?.output ||
+                data?.stderr ||
+                data?.error ||
+                data?.message ||
+                'Execution engine request failed.';
+
             return NextResponse.json(
                 {
-                    error: data?.error || data?.message || 'Execution engine request failed.',
+                    output: upstreamErrorText,
+                    error: true,
                     status: data?.status || 'failed',
                     errorType: data?.errorType || 'infra_error',
                     runId: data?.runId || null,
