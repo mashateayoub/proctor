@@ -38,14 +38,18 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               if (typeof window !== 'undefined') {
-                const silence = (fn) => (...args) => {
-                  const msg = args.join(' ');
-                  if (msg.includes('XNNPACK') || msg.includes('gl_context') || msg.includes('face_landmarker')) return;
+                const MEDIA_PIPE_XNNPACK_INFO = 'Created TensorFlow Lite XNNPACK delegate for CPU.';
+                const shouldSilenceOnlyKnownInfo = (args) =>
+                  args.some((arg) => String(arg).includes(MEDIA_PIPE_XNNPACK_INFO));
+
+                const patch = (fn) => (...args) => {
+                  if (shouldSilenceOnlyKnownInfo(args)) return;
                   fn.apply(console, args);
                 };
-                console.log = silence(console.log);
-                console.warn = silence(console.warn);
-                console.info = silence(console.info);
+
+                console.info = patch(console.info.bind(console));
+                console.warn = patch(console.warn.bind(console));
+                console.error = patch(console.error.bind(console));
               }
             `,
           }}
